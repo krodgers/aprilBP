@@ -1,0 +1,8 @@
+Member variables: m_*, this-> is obligatory
+Methods: v_*, this-> is obligatory (you can prefix virtual methods with vv_ if you are pedantic)
+Member properties: get_*, set_*, q_* (for Boolean properties), this-> is obligatory
+Static data: scope::s_*, scope:: is obligatory for class statics
+External data: g_* or gc_*, depends whether it is constant (although constant data are usually static)
+Static and external functions: do_*, can go without the prefix if the action is unambiguously a verb
+Function and method parameters: p_*
+Automatic data: a_* or an_* for singular names, l_* for collections
