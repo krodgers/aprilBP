@@ -42,7 +42,7 @@ class Factor : public virtual mxObject {
 
   // Constructors //////////////////////////////////////////////////////////////////////////
 
-  Factor(Factor const& f) : v_(f.v_), t_(f.t_) { 
+  Factor(Factor const& f) : v_(f.v_), t_(f.t_) {
 #ifdef __FACTOR_H_MEMORY
     memused += t_.capacity()*sizeof(double);
     mmax = std::max(mmax,memused);

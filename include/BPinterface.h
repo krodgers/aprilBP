@@ -13,17 +13,17 @@
 #include "Factor.h"
 #include "graphmodel.h"
 
-using namespace mex;
-//using mex::mxObject;
-//using mex::Var;
-//using mex::VarSet;
-//using mex::Factor;
-//using mex::vector;
-//using mex::graphModel;
-//using mex::factorGraph;
-//using mex::mplp;
+//using namespace mex;
+using mex::mxObject;
+using mex::Var;
+using mex::VarSet;
+using mex::Factor;
+using mex::vector;
+using mex::graphModel;
+using mex::factorgraph;
+using mex::mplp;
 //
-//using mex::timeSystem;
+using mex::timeSystem;
 
 
 /*
@@ -88,7 +88,7 @@ private:
 	double gbpTime, gbpIter, gbpObj;
 	double dt;
 	int    doCond;
-	bool   doVerbose;
+	bool   doVerbose; // toggles printing to std::out
 	int    nExtra;
 	int    iboundInit;
 	double logZ;

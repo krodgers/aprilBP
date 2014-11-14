@@ -1,4 +1,8 @@
 /*
+Questions:  If an exact solution has been found, do we keep doing more complicated things?
+*/
+
+/*
 Belief propagation interface for APPRIL
 
 
@@ -228,7 +232,7 @@ bool BpInterface::parseCommandOptions(int argc, char** argv){
 }
 
 
-
+//TODO:: what should this return?  String-Value pairs?
 bool BpInterface::estimateComplexity(){
 	//TODO:: come up with something to return
 	// compute induced width of a few orderings and return textbook estimates?	
@@ -245,11 +249,10 @@ double BpInterface::solvePR(){
 
 	bool result = true;
 // doLoopyBP
-// TODO:: check return types to see if we need to keep going	
 	result = doLoopyBP();
 // do Gen BP
 	if (!result)
-		result = doGeneralBP();
+		result = doGeneralBP();		
 // do iterCond
 	if (!result)
 		result = doIterativeConditioning();
@@ -304,62 +307,41 @@ mex::vector<Factor> BpInterface::getMARSolution(){
 	
 }
 
+/*
+Does Loopy BP
+
+returns if it sucessfully completes
+*/
 bool BpInterface::doLoopyBP(flist){
 	/*** LOOPY BELIEF PROPAGATION ******************************************************/
-
-
-	if (task == Task::PR || task == Task::MAR || task == Task::MMAP) {
-		mex::lbp _lbp(flist);
+	mex::lbp _lbp(flist);
+	if (doVerbose)
 		std::cout << "Model has " << nvar << " variables, " << _lbp.nFactors() << " factors\n";
-		if (lbpIter != 0 && lbpTime > 0) {
-			_lbp.setProperties("Schedule=Priority,Distance=L1");
-			_lbp.setStopIter(lbpIter);
-			_lbp.setStopMsg(lbpErr);
-			_lbp.setStopObj(lbpObj);
-			_lbp.setStopTime(lbpTime);
-			_lbp.init();
-
-			_lbp.run();
-			switch (task) {
-			case Task::PR: writePR(outfile, _lbp.logZ()); break;
-			case Task::MAR: {
-								for (size_t v = 0; v < nvar; ++v) if (!evVar.contains(Var(v, 0))) bel[v] = _lbp.belief(_lbp.localFactor(v));
+	if (lbpIter != 0 && lbpTime > 0) {
+		_lbp.setProperties("Schedule=Priority,Distance=L1");
+		_lbp.setStopIter(lbpIter);
+		_lbp.setStopMsg(lbpErr);
+		_lbp.setStopObj(lbpObj);
+		_lbp.setStopTime(lbpTime);
+		_lbp.init();
+		
+		_lbp.run();
+		switch (task) {
+		case Task::PR: 
+			writePR(outfile, _lbp.logZ()); break;
+		case Task::MAR: {
+							for (size_t v = 0; v < nvar; ++v) {
+								if (!evVar.contains(Var(v, 0)))
+									bel[v] = _lbp.belief(_lbp.localFactor(v));
 								writeMAR(outfile, bel);
-			} break;
-			}
-			std::cout << "LBP " << _lbp.logZ() / ln10 << "\n";
-
-			_lbp.reparameterize();                                         // Convert loopy bp results to model
-			fg = graphModel(_lbp.factors());
+							}
+		}break;
 		}
-	}
-	else if (task == Task::MPE) {
-		mex::mplp _mplp(flist);
-		if (lbpIter != 0 && lbpTime > 0) {
-			_mplp.setProperties("Schedule=Fixed,Update=Var,StopObj=-1.0,StopMsg=-1.0");
-			_mplp.setStopIter(lbpIter); _mplp.setStopMsg(lbpErr); _mplp.setStopObj(lbpObj); _mplp.setStopTime(lbpTime);
-			_mplp.init();
-			_mplp.run();
-			mex::vector<mex::index> best = _mplp.best();
-			for (size_t v = 0; v<best.size(); ++v) if (!evVar.contains(Var(v, 0))) xhat[v] = best[v];
-			//for (VarSet::const_iterator v=evVar.begin();v!=evVar.end();++v) best[*v]=xhat[*v];
-			std::cout << "MPLP " << fg.logP(xhat) << " (" << _mplp.ub() << ")\n";
-			//xhat = best;
-			mex::vector<mex::index> tmp(xhat.begin(), xhat.end());
-			if (fg.logP(xhat) > -mex::infty()) writeMPE(outfile, tmp);
-			fg = graphModel(_mplp.beliefs());
-			if (fg.logP(xhat) == -mex::infty()) {
-				std::cout << "Trying Gibbs...\n";
-				mex::gibbs _gibbs(fg); _gibbs.setProperties("Best=1,Beliefs=0"); _gibbs.init(); _gibbs.run();
-				mex::vector<mex::index> best = _gibbs.best();
-				if (fg.logP(best) > -mex::infty()) {
-					std::cout << "...got solution with logP=" << fg.logP(best) << "\n";
-					for (size_t v = 0; v < best.size(); ++v) if (!evVar.contains(Var(v, 0))) xhat[v] = best[v];
-					mex::vector<mex::index> tmp(xhat.begin(), xhat.end());
-					writeMPE(outfile, tmp);
-				}
-			}
-		}
+	if (doVerbose)
+		std::cout << "LBP " << _lbp.logZ() / ln10 << "\n";
+		
+		_lbp.reparameterize();                                         // Convert loopy bp results to model
+		factGraph = graphModel(_lbp.factors());
 	}
 
 }
@@ -382,7 +364,8 @@ bool BpInterface::doGeneralBP(mex::GraphModel graph){
 		}
 		try {
 			// Run Gbp On The Region Graph
-			std::cout << "GBP with " << _gbp.nRegions() << " regions; mem " << _gbp.memory() << "M\n";
+			if (doVerbose)
+				std::cout << "GBP with " << _gbp.nRegions() << " regions; mem " << _gbp.memory() << "M\n";
 			_gbp.setProperties("Schedule=Fixed");
 			_gbp.init();
 			_gbp.setStopIter(gbpIter); _gbp.setStopObj(gbpObj); _gbp.setStopMsg(-1.0);
@@ -393,42 +376,46 @@ bool BpInterface::doGeneralBP(mex::GraphModel graph){
 			// Get region indices for single-variable beliefs
 			mex::vector<mex::gbp::findex> regions(nvar);
 			for (size_t v = 0; v<nvar; ++v) {
-				if (!evVar.contains(Var(v, 0))) regions[v] = _gbp.regionWith(Var(v, 0));
+				if (!evVar.contains(Var(v, 0))) 
+					regions[v] = _gbp.regionWith(Var(v, 0));
 			}
 
 			double gbpLeft, gbpStop = timeSystem() + gbpTime;
 			while ((gbpLeft = gbpStop - timeSystem()) > 0) {
 				_gbp.setStopTime(std::min(dt, gbpLeft));
 				_gbp.run();
+				// save current answer
 				switch (task) {
 				case Task::PR:
-					writePR(outfile, _gbp.logZStable());
+					logZ = _gpb.logZStable();
 					break;
 				case Task::MAR: {
 									for (size_t v = 0; v < nvar; ++v)
-									if (!evVar.contains(Var(v, 0))) bel[v] = _gbp.computeRegionBelief(regions[v]).marginal(Var(v, 0));
-									writeMAR(outfile, bel);
+									if (!evVar.contains(Var(v, 0)))
+										bel[v] = _gbp.computeRegionBelief(regions[v]).marginal(Var(v, 0));
 				}
 					break;
 
 				}
-				std::cout << "GBP " << _gbp.logZ() / ln10 << "\n";
-				if (_gbp.dObj() < gbpObj{
-					std::cout << "Reached objective tolerance\n"; break;
+				if (doVerbose){
+					std::cout << "GBP " << _gbp.logZ() / ln10 << "\n";
+					if (_gbp.dObj() < gbpObj{
+						std::cout << "Reached objective tolerance\n"; break;
+					}
+					if (_gbp.iter() >= gbpIter && gbpIter > 0) {
+						std::cout << "Reached iteration limit\n"; break;
+					}
+					if (_gbp.logZ() == -mex::infty()) {
+						std::cout << "Model deemed inconsistent\n"; break;
+					}
 				}
-				if (_gbp.iter() >= gbpIter && gbpIter > 0) {
-					std::cout << "Reached iteration limit\n"; break;
-				}
-				if (_gbp.logZ() == -mex::infty()) {
-					std::cout << "Model deemed inconsistent\n"; break;
-				}
-
 			}
 			doneGBP = true;
-
-			if (isExact && _gbp.dObj() < gbpObj) { //InducedWidth <= ibound)
-				std::cout << "Answer should be exact\n";
-				return 0;
+			if (doVerbose){
+				if (isExact && _gbp.dObj() < gbpObj) { //InducedWidth <= ibound)
+					std::cout << "Answer should be exact\n"; // TODO:: Continue on to c
+					return 0;
+				}
 			}
 
 		}
@@ -462,15 +449,18 @@ bool BpInterface::doIterativeConditioning(mex::VarOrder order, mex::GraphModel f
 	while (!isExact) {
 		// add check for best conditioner given cardinality limit !!!  or, only increment if anytime...
 		cond += fg.bestConditioner(order, cond);
-		if (doVerbose) std::cout << "\n";
-		std::cout << "Conditioning " << cond << "\n";
+		if (doVerbose) {
+			std::cout << "\n";
+			std::cout << "Conditioning " << cond << "\n";
+		}
 		ibound = iboundInit;																// check all iBounds again (in case higher available)
 
 		bool doneCGBP = false;
 		while (!doneCGBP) {
 			bool useMBE = false;
 			if (task == Task::PR && fitsMBE(fg, order, &cond)) {
-				std::cout << "Trying exact via MBE\n";
+				if (doVerbose)
+					std::cout << "Trying exact via MBE\n";
 				useMBE = true; isExact = true;
 			}
 			try {
@@ -483,14 +473,17 @@ bool BpInterface::doIterativeConditioning(mex::VarOrder order, mex::GraphModel f
 					mex::vector<Factor> fcond = fg.factors();
 					for (size_t f = 0; f<fcond.size(); ++f) {
 						VarSet isect = cond & fcond[f].vars();
-						if (isect.size() > 0) fcond[f] = fcond[f].condition(isect, sub2ind(isect, val));
+						if (isect.size() > 0) 
+							fcond[f] = fcond[f].condition(isect, sub2ind(isect, val));
 					}
 
 					try {
 						if (useMBE) {         // if a bucket elim pass was good enough, do that:
 							mex::graphModel gm(fcond);
 							lnZ[i] = solveMBE(gm, order);
-							for (size_t v = 0; v < cond.size(); ++v) std::cout << cond[v] << "=" << val[cond[v]] << " "; std::cout << lnZ[i] << "\n";
+							for (size_t v = 0; v < cond.size(); ++v) 
+								std::cout << cond[v] << "=" << val[cond[v]] << " "; 
+							std::cout << lnZ[i] << "\n";
 							continue;
 						}                     // otherwise we need to do GBP-like updates:
 					}
@@ -509,7 +502,8 @@ bool BpInterface::doIterativeConditioning(mex::VarOrder order, mex::GraphModel f
 
 					// TODO:DEBUG: it seems that reinitializing gbp is not equivalent to re-constructing a new one.. FIX
 					mex::gbp _gbp(fcond);
-					if (vm.count("ijgp")) _gbp.setMinimal(true); else _gbp.setMinimal(false);  // use "ijgp-like" regions?
+					if (vm.count("ijgp"))
+						_gbp.setMinimal(true); else _gbp.setMinimal(false);  // use "ijgp-like" regions?
 					isExact = gbpPopulateCliques(_gbp, order, ibound, &cond);
 					_gbp.setProperties("Schedule=Fixed");
 					_gbp.setStopIter(gbpIter); _gbp.setStopObj(gbpObj); _gbp.setStopMsg(-1.0);
@@ -518,7 +512,8 @@ bool BpInterface::doIterativeConditioning(mex::VarOrder order, mex::GraphModel f
 
 					if (task == Task::MAR) {		// TODO: change to loop over "inferred" variable list...
 						for (size_t v = 0; v < nvar; ++v) {
-							if (!evVar.contains(Var(v, 0)) && !cond.contains(Var(v, 0))) regions[v] = _gbp.regionWith(Var(v, 0));
+							if (!evVar.contains(Var(v, 0)) && !cond.contains(Var(v, 0))) 
+								regions[v] = _gbp.regionWith(Var(v, 0));
 						}
 					}
 					// uncomment duplicate lines below
@@ -543,41 +538,51 @@ bool BpInterface::doIterativeConditioning(mex::VarOrder order, mex::GraphModel f
 					std::cout << lnZ[i] << "\n";
 				}
 				if (failed) { 
-					std::cout << "Failing out\n"; doneCGBP = true; continue;
+					if (doVerbose)
+						std::cout << "Failing out\n";
+					doneCGBP = true; continue;
 				} // if we failed out, condition on more vars
 
 				doneCGBP = true;
 				double lnZtot = lnZ.logsumexp();
 				switch (task) {
+					//Save solutions
 				case Task::PR:
-					writePR(outfile, lnZtot);
+					logZ = lnZtot;
 					break;
 				case Task::MAR:
 					Factor probs = (lnZ - lnZtot).exp();
 					for (size_t v = 0; v < nvar; ++v) {
 						if (evVar.contains(Var(v, 0))) {} // evidence variables not updated
-						else if (cond.contains(Var(v, 0)))  { bel[v] = probs.marginal(Var(v, 0)); }
+						else if (cond.contains(Var(v, 0)))  { 
+							bel[v] = probs.marginal(Var(v, 0));
+						}
 						else {		// TODO: change to incremental update?
 							bel[v] = condMarginals[0][v] * probs[0];
 							for (size_t i = 1; i < lnZ.nrStates(); ++i) 
 								bel[v] += condMarginals[i][v] * probs[i];
 						}
 					}
-					writeMAR(outfile, bel);
+					//writeMAR(outfile, bel);
 					break;
 				}
-				std::cout << "Conditioning " << cond << " => " << lnZtot << " (" << lnZtot / ln10 << ")\n";
+				if (doVerbose)
+					std::cout << "Conditioning " << cond << " => " << lnZtot << " (" << lnZtot / ln10 << ")\n";
 
 			}
 			catch (std::exception& e) {
 				doneCGBP = false; MemLimit *= .9; ibound--;
-				std::cout << "Caught exception (memory overreach?).  Trying again with ibound " << ibound << " and MemLimit " << MemLimit << "\n";
+				if (doVerbose)
+					std::cout << "Caught exception (memory overreach?).  Trying again with ibound " << ibound << " and MemLimit " << MemLimit << "\n";
 				continue;
 				// TODO: this is right if we're only doing this part, but not right if we're running incrementally
 			}
 
 			// !!! TODO: if doCond > 1, quit (non-incremental)?
-			if (isExact) { std::cout << "Answer should be exact\n"; return 0; }
+			if (isExact) { 
+				if (doVerbose)
+				std::cout << "Answer should be exact\n"; return 0;
+			}
 		}
 	}
 
@@ -633,7 +638,8 @@ double BpInterface::solveMBE(const graphModel& gm, const mex::VarOrder& order) {
 	mb.setPseudotree(pt);
 	mb.setProperties("ElimOp=SumUpper,sBound=inf,DoMatch=1,DoMplp=0,DoFill=0,DoJG=0,DoHeur=0");
 	mb.setIBound(100); //double mbMem = mb.simulateMemory(NULL,NULL,mbCutoff,&isExact);
-	std::cout << "Attempting exact solve\n";
+	if (doVerbose)
+		std::cout << "Attempting exact solve\n";
 	//std::cout<<"Attempting exact solve; mbMem="<<mbMem<<" vs "<<mbCutoff<<" ("<<MemLimit<<")\n";
 	mb.init();
 	return mb.logZ();
@@ -649,16 +655,19 @@ bool BpInterface::tryExactPR(const mex::graphModel& gm, const mex::VarOrder& ord
 		mb.setProperties("ElimOp=SumUpper,sBound=inf,DoMatch=1,DoMplp=0,DoFill=0,DoJG=0,DoHeur=0");
 		mb.setIBound(100); double mbMem = mb.simulateMemory(NULL, NULL, mbCutoff, &isExact);
 		if (mbMem < mbCutoff && isExact) {
-			std::cout << "Attempting exact solve; mbMem=" << mbMem << " vs " << mbCutoff << " (" << MemLimit << ")\n";
+			if (doVerbose)
+				std::cout << "Attempting exact solve; mbMem=" << mbMem << " vs " << mbCutoff << " (" << MemLimit << ")\n";
 			mb.init();
-			writePR(outfile, mb.logZ());
-			std::cout << "Exact solution by MBE: " << mb.logZ() / std::log(10) << "\n";
+			logZ = mb.logZ();
+			if(doVerbose)
+				std::cout << "Exact solution by MBE: " << mb.logZ() / std::log(10) << "\n";
 			return true;
 		}
 	}
 	catch (std::exception& e) {
 		// Failed (probably for memory reasons) => try GBP
-		std::cout << "Failed (due to memory problem?)  Trying GBP\n";
+		if (doVerbose)
+			std::cout << "Failed (due to memory problem?)  Trying GBP\n";
 	}
 	return false;
 }
@@ -682,13 +691,17 @@ bool BpInterface::gbpPopulateCliques(mex::gbp& _gbp, const mex::VarOrder& order,
 		_gbp.addRegions(cliques); mem = _gbp.memory();
 	}
 	while (ibound > 0 && (mbMem >= mbCutoff || mem > MemLimit)) {
-		std::cout << "MBE iBound " << ibound << " = " << mem << "M\n";
+		if (doVerbose)
+			std::cout << "MBE iBound " << ibound << " = " << mem << "M\n";
 		mb.setIBound(--ibound); cliques.clear(); mbMem = mb.simulateMemory(&cliques, cond, mbCutoff, &isExact);
-		if (mbMem < mbCutoff) { _gbp.clearRegions(); _gbp.addRegions(cliques); mem = _gbp.memory(); }
+		if (mbMem < mbCutoff) {
+			_gbp.clearRegions(); _gbp.addRegions(cliques); mem = _gbp.memory();
+		}
 	}
 	//ofstream ofs("cliques.mbe.txt");
 	//for (size_t c=0;c<cliques.size();++c) ofs<<cliques[c]<<"\n"; std::cout<<"\n";  // output for DEBUG !!!
 	//ofs.close();
-	std::cout << "MBE iBound " << ibound << " = " << mem << "M\n";
+	if(doVerbose)
+		std::cout << "MBE iBound " << ibound << " = " << mem << "M\n";
 	return isExact;
 }
