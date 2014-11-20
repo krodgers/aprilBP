@@ -5,11 +5,12 @@
 #ifdef WINDOWS
 
 #include <Windows.h>
+#else
+#include<sys/time.h>
 #endif
 
 #include<cmath>
 #include<ctime>
-//#include<sys/time.h>
 #include<time.h>
 #include<cassert>
 #include<cstdlib>
