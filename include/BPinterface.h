@@ -70,6 +70,8 @@ namespace lgbp {
     int task; // which task we're doing
     mex::vector<Factor> bel; // stores results for MAR
     mex::vector<Factor> facts; // stores the factors 
+    VarSet evVar; // evidence variables
+    size_t nvar;
     mex::graphModel factGraph; // the graph of the model
     double logZ; // result of PR
 	
@@ -96,8 +98,8 @@ namespace lgbp {
   
     double solvePR();    // Returns the result for PR query
     mex::vector<Factor> solveMAR();     // Returns the beliefs for MAR query
-    bool doLoopyBP(mex::vector<Factor> flist);    // Does Loopy BP on factGraph
-    bool doGeneralBP(mex::vector<Factor> flist);    // Does General BP on factGraph
+    bool doLoopyBP();    // Does Loopy BP on factGraph
+    bool doGeneralBP();    // Does General BP on factGraph
     bool doIterativeConditioning();
     bool parseCommandOptions(int argc, char** argv);    // Puts command line options in vm
     mex::VarOrder computeVariableOrder(int numTries, double timeLimit);    // Computes a variable order
@@ -105,7 +107,7 @@ namespace lgbp {
     double solveMBE(const graphModel& gm, const mex::VarOrder& order);
     bool tryExactPR(const graphModel& gm, const mex::VarOrder& order);
     bool gbpPopulateCliques(mex::gbp& _gbp, const mex::VarOrder& order, size_t& ibound, VarSet* cond);
-    bool readEvidenceFile(mex::vector<Factor> &flist);
+    bool readEvidenceFile();
     mex::vector<Factor> readUaiFile();
 
   };
