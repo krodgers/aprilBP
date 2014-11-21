@@ -1,0 +1,7 @@
+#!/bin/bash
+
+#make bp_interface
+
+# Run bp_interface
+./bp_interface -f ../data/test.uai -e none.e -T PR --verbose
+

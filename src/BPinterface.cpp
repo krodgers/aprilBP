@@ -1,8 +1,4 @@
 /*
-  Questions:  If an exact solution has been found, do we keep doing more complicated things?
-*/
-
-/*
   Belief propagation interface for APPRIL
 
 
@@ -14,34 +10,27 @@
 #include <iostream>
 #include <fstream>
 
+#include "mbe.h"
 
 
 using namespace lgbp;
 using namespace mex;
 using namespace std;
 
-bool BpInterface::initialize(int argc, char** argv, int theTask){
-  // set up task
-  switch (theTask){
-  case Task::PR:
-    task = Task::PR;
-    break;
-  case Task::MAR:
-    task = Task::MAR;
-    break;
-  default:
-    return false;
-  }
+bool BpInterface::initialize(int argc, char** argv){
   // set up algorithm options
-  parseCommandOptions(argc, argv);
+  bool allGood = parseCommandOptions(argc, argv);
+  memUseRandom = std::exp(40.0);
 
-
+  if(!allGood)
+    return false;
   // read in uai file
   facts = readUaiFile();
   readEvidenceFile();
   // set up data structures
   factGraph = mex::graphModel(facts);
-
+  order = computeVariableOrder(nOrders, timeOrder); // try to get a decent order
+  
   return true;
 }
 
@@ -119,6 +108,9 @@ bool BpInterface::readEvidenceFile(){
 
 /*
   Parses and initialized command-line-given arguments
+  Non-positional arguments must be given via --argument, i.e --help
+  positional arguments: -f problem_file -e evidence_file -q query-T task 
+
 
   returns true if all required arguments are sent and all arguments are successfully parsed
   false otherwise
@@ -148,7 +140,7 @@ bool BpInterface::parseCommandOptions(int argc, char** argv){
     ("gbpi", po::value<double>(&gbpIter)->default_value(-1), "gen belief propagation stop (iterations)")
     ("gbpo", po::value<double>(&gbpObj)->default_value(-1), "gen belief propagation stop (objective)")
     ("condition", po::value<int>(&doCond)->default_value(0), "do conditioning search after gbp (0=no,1=incremental,k=at most k states)")
-    ("verbose", "verbose output during algorithm execution")
+    ("verbose,v", "verbose output during algorithm execution")
     ("ijgp", "use ijgp regions only")
     ;
 
@@ -237,7 +229,8 @@ bool BpInterface::estimateComplexity(){
 
 double BpInterface::solvePR(){
   // Try exact solution
-  mex::VarOrder order = computeVariableOrder(nOrders, timeOrder);
+  //TODO:: where to first compute order?
+  //order = computeVariableOrder(nOrders, timeOrder);
   if (tryExactPR(factGraph, order)){
     //found a solution
     return getPRSolution();
@@ -250,7 +243,8 @@ double BpInterface::solvePR(){
   if (!result)
     result = doGeneralBP();		
   // do iterCond
-  if (!result)
+  bool isExact = false; //TODO:: FIX THIS
+  if (!result && !isExact)
     result = doIterativeConditioning();
 
 
@@ -268,7 +262,8 @@ mex::vector<mex::Factor> BpInterface::solveMAR(){
   if (!result)
     result = doGeneralBP();
   // do iterCond
-  if (!result)
+  bool isExact = false; //TODO:: FIX THIS  if (!result && !isExact)
+  if(!result && !isExact)
     result = doIterativeConditioning();
 	
 	
@@ -362,7 +357,7 @@ bool BpInterface::doGeneralBP() {
   bool exact = false;
   size_t ibound = iboundInit, InducedWidth=10000;
   
-  mex::VarOrder order = computeVariableOrder(nOrders,timeOrder);
+  order = computeVariableOrder(nOrders,timeOrder);
   if (vm.count("ijgp"))
     _gbp.setMinimal(true);      // use "ijgp-like" regions? (true = remove all with c=0)
   else
@@ -379,82 +374,83 @@ bool BpInterface::doGeneralBP() {
       ibound = 0; isExact = false;
     }
     try {
-      // // Run Gbp On The Region Graph
-      // if (doVerbose)
-      // 	std::cout << "GBP with " << _gbp.nRegions() << " regions; mem " << _gbp.memory() << "M\n";
-      // _gbp.setProperties("Schedule=Fixed");
-      // _gbp.init();
-      // _gbp.setStopIter(gbpIter); _gbp.setStopObj(gbpObj); _gbp.setStopMsg(-1.0);
-      // _gbp.setVerbose(doVerbose);
-      // if (isExact)
-      // 	_gbp.setDamping(-1.0);  // no damping if we think it's exact
+      // Run Gbp On The Region Graph
+      if (doVerbose)
+      	std::cout << "GBP with " << _gbp.nRegions() << " regions; mem " << _gbp.memory() << "M\n";
+      _gbp.setProperties("Schedule=Fixed");
+      _gbp.init();
+      _gbp.setStopIter(gbpIter); _gbp.setStopObj(gbpObj); _gbp.setStopMsg(-1.0);
+      _gbp.setVerbose(doVerbose);
+      if (isExact)
+      	_gbp.setDamping(-1.0);  // no damping if we think it's exact
 
-      // // Get region indices for single-variable beliefs
-      // mex::vector<mex::gbp::findex> regions(nvar);
-      // for (size_t v = 0; v<nvar; ++v) {
-      // 	if (!evVar.contains(Var(v, 0))) 
-      // 	  regions[v] = _gbp.regionWith(Var(v, 0));
-      // }
+      // Get region indices for single-variable beliefs
+      mex::vector<mex::gbp::findex> regions(nvar);
+      for (size_t v = 0; v<nvar; ++v) {
+      	if (!evVar.contains(Var(v, 0))) 
+      	  regions[v] = _gbp.regionWith(Var(v, 0));
+      }
 
-      // double gbpLeft, gbpStop = timeSystem() + gbpTime;
-      // while ((gbpLeft = gbpStop - timeSystem()) > 0) {
-    // 	_gbp.setStopTime(std::min(dt, gbpLeft));
-    // 	_gbp.run();
-    // 	// save current answer
-    // 	switch (task) {
-    // 	case Task::PR:{
-    // 	  logZ = _gbp.logZStable();
-    // 	  res = true;}
-    // 	  break;
-    // 	case Task::MAR:{
-    // 	  for (size_t v = 0; v < nvar; ++v)
-    // 	    if (!evVar.contains(Var(v, 0)))
-    // 	      bel[v] = _gbp.computeRegionBelief(regions[v]).marginal(Var(v, 0));
+      double gbpLeft, gbpStop = timeSystem() + gbpTime;
+      while ((gbpLeft = gbpStop - timeSystem()) > 0) {
+    	_gbp.setStopTime(std::min(dt, gbpLeft));
+    	_gbp.run();
+    	// save current answer
+	switch (task) {
+	case Task::PR:{
+	  logZ = _gbp.logZStable();
+	  res = true;}
+	  break;
+	case Task::MAR:{
+	  for (size_t v = 0; v < nvar; ++v)
+	    if (!evVar.contains(Var(v, 0)))
+	      bel[v] = _gbp.computeRegionBelief(regions[v]).marginal(Var(v, 0));
 	  
-    // 	  res = true;}
-    // 	  break;
-    // 	}
-    // 	if (doVerbose)
-    // 	  std::cout << "GBP " << _gbp.logZ() / ln10 << "\n";
-    // 	if (_gbp.dObj() < gbpObj){
-    // 	  if (doVerbose)
-    // 	    std::cout << "Reached objective tolerance\n";
-    // 	  res = true; break;
-    // 	}
-    // 	if (_gbp.iter() >= gbpIter && gbpIter > 0) {
-    // 	  if (doVerbose)
-    // 	    std::cout << "Reached iteration limit\n";
-    // 	  res = true;break;
-    // 	}
-    // 	if (_gbp.logZ() == -mex::infty()) {
-    // 	  if( doVerbose)
-    // 	    std::cout << "Model deemed inconsistent\n"; 
-    // 	  res = false;break;
-    // 	}
+	  res = true;}
+	  break;
+	}
+      }
+      if (doVerbose)
+	std::cout << "GBP " << _gbp.logZ() / ln10 << "\n";
+      if (_gbp.dObj() < gbpObj){
+	if (doVerbose)
+	  std::cout << "Reached objective tolerance\n";
+	res = true; break;
+      }
+      if (_gbp.iter() >= gbpIter && gbpIter > 0) {
+	if (doVerbose)
+	  std::cout << "Reached iteration limit\n";
+	res = true;break;
+      }
+      if (_gbp.logZ() == -mex::infty()) {
+	if( doVerbose)
+	  std::cout << "Model deemed inconsistent\n"; 
+	res = false;break;
+      }
 	
-    // 	doneGBP = true;
+      doneGBP = true;
 	
-    // 	if (isExact && _gbp.dObj() < gbpObj) { //InducedWidth <= ibound)
-    // 	  if (doVerbose)
-    // 	    std::cout << "Answer should be exact\n"; // TODO:: Continue on to c
-    // 	  return true;
-    // 	}
+      if (isExact && _gbp.dObj() < gbpObj) { //InducedWidth <= ibound)
+	if (doVerbose)
+	  std::cout << "Answer should be exact\n"; // TODO:: Continue on to c
+	return true;
+      }
 	
 
-       } catch (std::exception& e) {
-    // 	if (_gbp.getDamping() > 0.25) {
-    // 	  doneGBP = true;
-    // 	  std::cout << "Caught exception (memory overreach?).  Damping on => quitting GBP\n";
-    // 	  res = false;
-    // 	}
-    // 	else {
-    // 	  doneGBP = false;
-    // 	  MemLimit *= .9; ibound--;
-    // 	  std::cout << "Caught exception (memory overreach?).  Trying again with ibound " << ibound << " and MemLimit " << MemLimit << "\n";
-    // 	  res = false;
-    // 	}
+    } catch (std::exception& e) {
+      // 	if (_gbp.getDamping() > 0.25) {
+      // 	  doneGBP = true;
+      // 	  std::cout << "Caught exception (memory overreach?).  Damping on => quitting GBP\n";
+      // 	  res = false;
+      // 	}
+      // 	else {
+      // 	  doneGBP = false;
+      // 	  MemLimit *= .9; ibound--;
+      // 	  std::cout << "Caught exception (memory overreach?).  Trying again with ibound " << ibound << " and MemLimit " << MemLimit << "\n";
+      // 	  res = false;
+      // 	}
 	
-       } // end catch
+    } // end catch
 
 
 
@@ -466,27 +462,29 @@ bool BpInterface::doGeneralBP() {
 
 
 
-bool BpInterface::doIterativeConditioning(mex::VarOrder order, mex::GraphModel fg){
+bool BpInterface::doIterativeConditioning(){
+
+  double ln10 = std::log(10);
   if (order.size() == 0)
-    order = fg.order(mex::graphModel::OrderMethod::MinWidth);  // need an order if none yet...
+    order = factGraph.order(mex::graphModel::OrderMethod::MinWidth);  // need an order if none yet...
   mex::gbp _gbp(mex::vector<Factor>());  // !!! blank out GBP object; restore memory
   VarSet cond;
 
   //!!! TODO: if doCond > 1, we should immediately populate with that many states
-
+  bool isExact = true;
   while (!isExact) {
     // add check for best conditioner given cardinality limit !!!  or, only increment if anytime...
-    cond += fg.bestConditioner(order, cond);
+    cond += factGraph.bestConditioner(order, cond);
     if (doVerbose) {
       std::cout << "\n";
       std::cout << "Conditioning " << cond << "\n";
     }
-    ibound = iboundInit;																// check all iBounds again (in case higher available)
+    size_t ibound = iboundInit;																// check all iBounds again (in case higher available)
 
     bool doneCGBP = false;
     while (!doneCGBP) {
       bool useMBE = false;
-      if (task == Task::PR && fitsMBE(fg, order, &cond)) {
+      if (task == Task::PR && fitsMBE(factGraph, order, &cond)) {
 	if (doVerbose)
 	  std::cout << "Trying exact via MBE\n";
 	useMBE = true; isExact = true;
@@ -498,7 +496,7 @@ bool BpInterface::doIterativeConditioning(mex::VarOrder order, mex::GraphModel f
 	mex::vector<mex::gbp::findex> regions(nvar);			// !!! dangerous; pull out & match to prev (clear+resize)
 	for (size_t i = 0; i < lnZ.nrStates(); ++i) {
 	  std::map<Var, size_t> val;  ind2sub(cond, i, val);
-	  mex::vector<Factor> fcond = fg.factors();
+	  mex::vector<Factor> fcond = factGraph.factors();
 	  for (size_t f = 0; f<fcond.size(); ++f) {
 	    VarSet isect = cond & fcond[f].vars();
 	    if (isect.size() > 0) 
@@ -623,21 +621,22 @@ bool BpInterface::doIterativeConditioning(mex::VarOrder order, mex::GraphModel f
   Params: numTries: the number of orders to compute and score
   timeLimit: max amount of time to spend searching for an order
 */
-mex::VarOrder BpInterface::computeVariableOrder(int numTries, double timeLimit, mex::FactorGraph fg){
+mex::VarOrder BpInterface::computeVariableOrder(int numTries, double timeLimit){
   mex::VarOrder order; 				// start with a random order in case the model is very dense
-  double score = fg.order(mex::graphModel::OrderMethod::Random, order, 0, memUseRandom);
+  double score = factGraph.order(mex::graphModel::OrderMethod::Random, order, 0, memUseRandom);
 
   // Otherwise, calculate elimination order(s) ////////////////////////////////////
   double startOrder = timeSystem();
   size_t iOrder = 0;
   // Try to build new orders until time or count limit reached ////////////////////
   while (iOrder < numTries && (timeSystem() - startOrder < timeLimit)) {
-    score = fg.order(mex::graphModel::OrderMethod::WtMinFill, order, nExtra, score);
+    score = factGraph.order(mex::graphModel::OrderMethod::WtMinFill, order, nExtra, score);
     ++iOrder;
   }
-  if (score < memUseRandom)
-    InducedWidth = fg.inducedWidth(order);
-  //	 std::cout << "Best order of " << iOrder << " has induced width " << InducedWidth << ", score " << score << "\n";
+  //if (score < memUseRandom)
+  // int InducedWidth = factGraph.inducedWidth(order);
+  if(doVerbose)
+    std::cout << "Best order of " << iOrder << " has induced width " << factGraph.inducedWidth(order) << ", score " << score << "\n";
 
 }
 

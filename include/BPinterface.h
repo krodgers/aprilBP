@@ -14,6 +14,7 @@
 #include "graphmodel.h"
 #include "lbp.h"
 #include "gbp.h"
+#include "VarSet.h"
 
 using mex::mxObject;
 using mex::Var;
@@ -53,10 +54,10 @@ namespace lgbp {
     //
     // Functions
     //
-    BpInterface();
+    //BpInterface();
 	
    
-    bool initialize(int argc, char** argv, int theTask); // Initialize the computation. Returns true on success.
+    bool initialize(int argc, char** argv); // Initialize the computation. Returns true on success.
 
     // Does nothing right now  
     bool estimateComplexity();
@@ -71,6 +72,7 @@ namespace lgbp {
     mex::vector<Factor> bel; // stores results for MAR
     mex::vector<Factor> facts; // stores the factors 
     VarSet evVar; // evidence variables
+    mex::VarOrder order; // the ordering of the variables
     size_t nvar;
     mex::graphModel factGraph; // the graph of the model
     double logZ; // result of PR
@@ -87,7 +89,7 @@ namespace lgbp {
     	
     double timeOrder;
     int    nOrders;
-    double memUseRandom = std::exp(40.0);	// if memory *way* out of reach, just use random ordering...
+    double memUseRandom;	// if memory *way* out of reach, just use random ordering...
     //} ;
 	
     po::variables_map vm; // algorithm options

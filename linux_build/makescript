@@ -1,2 +1,2 @@
 #!/bin/bash
-g++ -g -O3 $* -I../include ../src/Factor.cpp ../src/graphmodel.cpp ../src/BPinterface.cpp -lboost_program_options --static 
+g++ -g -O3 $* -I../include ../src/Factor.cpp ../src/graphmodel.cpp ../src/BPinterface.cpp ../src/test_interface.cpp -lboost_program_options --static 
