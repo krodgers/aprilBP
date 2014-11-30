@@ -1,10 +1,10 @@
 #!/bin/bash
 
-make solve_uai
-make bp_interface
+#make solve_uai
+#make bp_interface
 
 # Run uai solver
-./uai_14 -f ../data/test.uai -e none.e -T PR
+#x./uai_14 -f ../data/test.uai -e none.e -T PR
 
 # Run bp_interface
 ./bp_interface -f ../data/test.uai -e none.e -T PR --verbose

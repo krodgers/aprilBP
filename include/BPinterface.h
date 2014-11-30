@@ -59,16 +59,19 @@ namespace lgbp {
    
     bool initialize(int argc, char** argv); // Initialize the computation. Returns true on success.
 
-    // Does nothing right now  
-    bool estimateComplexity();
+    bool estimateComplexity(int &timeComplexity, int &memComplexity);  // Does nothing right now  
     double getPRSolution();
     mex::vector<Factor> getMARSolution();
+    bool runInference(int timeLimit); // runs the inference algorithm for a small amount of time. Meant to be called repeatedly
 
   private:
     //
     // Fields
     //
+    MEX_ENUM(Phase , EXACT, LBP, GBP, ITERCOND, DONE );
+
     int task; // which task we're doing
+    int phase; // track if stop command has been sent
     mex::vector<Factor> bel; // stores results for MAR
     mex::vector<Factor> facts; // stores the factors 
     VarSet evVar; // evidence variables
@@ -76,6 +79,8 @@ namespace lgbp {
     size_t nvar;
     mex::graphModel factGraph; // the graph of the model
     double logZ; // result of PR
+
+    
 	
     //struct algOptions{
     double MemLimit;
@@ -87,7 +92,8 @@ namespace lgbp {
     int    nExtra;
     int    iboundInit;
     	
-    double timeOrder;
+    bool isExact; // true when we've gotten an exact solution
+    double timeOrder; // max time to spend on variable ordering
     int    nOrders;
     double memUseRandom;	// if memory *way* out of reach, just use random ordering...
     //} ;
@@ -98,8 +104,6 @@ namespace lgbp {
     // Functions
     //
   
-    double solvePR();    // Returns the result for PR query
-    mex::vector<Factor> solveMAR();     // Returns the beliefs for MAR query
     bool doLoopyBP();    // Does Loopy BP on factGraph
     bool doGeneralBP();    // Does General BP on factGraph
     bool doIterativeConditioning();

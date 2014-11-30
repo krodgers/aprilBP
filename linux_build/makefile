@@ -1,4 +1,3 @@
-OBJS = solve_uai.o bp_interface.o
 CC = g++
 DEBUG = -g
 CFLAGS =  $(DEBUG) -I../include  -O3
@@ -12,7 +11,7 @@ bp_interface: $(SRCDIR)BPinterface.cpp $(SRCDIR)test_interface.cpp
 	$(CC) $(CFLAGS) $(SRCDIR)Factor.cpp $(SRCDIR)factorgraph.cpp $(SRCDIR)graphmodel.cpp  $(SRCDIR)BPinterface.cpp $(SRCDIR)test_interface.cpp $(LFLAGS)  -o bp_interface
 
 clean:
-	\rm *.o *~ solve_uai bp_interface -f
+	\rm *.o *~ uai_14 bp_interface -f
 
 tar:
-	tar cfv p1.tar 
+	tar cfv 

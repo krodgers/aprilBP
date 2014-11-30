@@ -17,9 +17,19 @@ int main(int argc, char** argv){
   printf("Starting...\n");
   BpInterface bpi;
   printf("Initializing\n");
-  bpi.initialize(argc,argv);
+  bool success = bpi.initialize(argc,argv);
+  if(!success){
+    printf("Failed Initializing\n");
+    return 0;
+  }
+   
+ 
   printf("Analyzing\n");
-  bpi.estimateComplexity();
+  int time, memory;
+  bpi.estimateComplexity(time, memory);
+
+  printf("Beginning Inference\n");
+  bpi.runInference(120);
   printf("Getting solution\n");
   double ans =  bpi.getPRSolution();
   printf("Solution returned: %.4f\n",ans);

@@ -17,21 +17,39 @@ using namespace lgbp;
 using namespace mex;
 using namespace std;
 
+/*
+  Initializes parameters and data structures
+
+  Returns true if successful and false otherwise
+ */
 bool BpInterface::initialize(int argc, char** argv){
   // set up algorithm options
   bool allGood = parseCommandOptions(argc, argv);
-  memUseRandom = std::exp(40.0);
-
   if(!allGood)
     return false;
-  // read in uai file
+
+  // read  in uai file
   facts = readUaiFile();
-  readEvidenceFile();
+  if(vm.empty()){
+    if(doVerbose)
+      printf("Could not read UAI file\n");
+    return false;
+  }
+  allGood = readEvidenceFile();
+  if(!allGood)
+    return false;
+  
   // set up data structures
   factGraph = mex::graphModel(facts);
-  order = computeVariableOrder(nOrders, timeOrder); // try to get a decent order
-  
+
+  // initialize other member variables
+  memUseRandom = std::exp(40.0);
+  bool isExact = false;
+  phase = Phase::EXACT;
+  logZ = 0;
+  bel = mex::vector<Factor>();
   return true;
+
 }
 
 /*
@@ -116,7 +134,7 @@ bool BpInterface::readEvidenceFile(){
   false otherwise
 */
 bool BpInterface::parseCommandOptions(int argc, char** argv){
-  // create command options
+  // parse command options
   po::options_description desc("Available options");
   desc.add_options()
     ("help", "print help message")
@@ -160,7 +178,12 @@ bool BpInterface::parseCommandOptions(int argc, char** argv){
 
   /*** ARGUMENT CHECKING *************************************************************/
   if (vm.count("help")) { std::cout << desc << "\n"; return false; }
-  if (vm.count("verbose")) doVerbose = true; else doVerbose = false;
+  if (vm.count("verbose")) 
+    doVerbose = true; 
+  else 
+    doVerbose = false;
+
+
   if (!vm.count("file")) { 
     std::cout << "Missing input problem file!\n"; 
     return false;
@@ -188,14 +211,14 @@ bool BpInterface::parseCommandOptions(int argc, char** argv){
       mex::randSeed(1234);
     if (inftime != NULL) 
       TotalTime = atof(inftime);
-    if (TotalTime < 60.0) {									// Small time limit
+    if (TotalTime < 60.0) {	// Small time limit
       lbpTime = 1.5; lbpErr = 1e-4;
       nOrders = 100; timeOrder = 1.5; nExtra = 2;
       gbpTime = 300; gbpObj = 1e-2; gbpIter = -1; dt = 0.5;
       iboundInit = 30; MemLimit = std::min(MemLimit, 300.0); memUseRandom = std::exp(28);
       doCond = 1;
     }
-    else if (TotalTime < 1800) {					// Moderate time limit
+    else if (TotalTime < 1800) {// Moderate time limit
       lbpTime = 10; lbpErr = 1e-4;
       nOrders = 1000; timeOrder = 60; nExtra = 3;
       gbpTime = 1000; gbpObj = 1e-2; gbpIter = -1; dt = 30;
@@ -217,71 +240,114 @@ bool BpInterface::parseCommandOptions(int argc, char** argv){
 
   if(doVerbose)
     std::cout << "Memory limit set to " << MemLimit << "mb\n";
+
+  return true;
 }
 
 
 //TODO:: what should this return?  String-Value pairs?
-bool BpInterface::estimateComplexity(){
+/**
+   Gives a shot in the dark guesstimate about the complexity
+
+   parameters:  timeComplexity: out param; where the time complexity is stored (secs)
+                memComplexity: out param; where the memory complexity is stored
+ */
+bool BpInterface::estimateComplexity(int &timeComplexity, int &memComplexity){
   //TODO:: come up with something to return
   // compute induced width of a few orderings and return textbook estimates?	
+  int score;
+  order = computeVariableOrder(nOrders, 3/*, score*/);
+  
+  timeComplexity = score;
+  memComplexity = factGraph.inducedWidth(order) * nvar;
+  
   return true;
 }
 
-double BpInterface::solvePR(){
+/**
+   Runs the solvers for the specified amount of time.  Can be called repeatedly in succession and the 
+   computation will pick up where it left off
+
+   Does NOT return a solution.  Call getXSolution for the solution for task X
+
+   returns true if nothing's gone wrong
+ */
+bool BpInterface::runInference(int timeLimit){
+  // todo:: implement timing
+
+  if(isExact) // already done all the inference possible
+    return true;
+  bool result;
   // Try exact solution
   //TODO:: where to first compute order?
-  //order = computeVariableOrder(nOrders, timeOrder);
-  if (tryExactPR(factGraph, order)){
-    //found a solution
-    return getPRSolution();
+  switch(phase){
+  case Phase::DONE: 
+    return true;
+  case Phase::EXACT:  
+    order = computeVariableOrder(nOrders, timeOrder);
+    
+    if (tryExactPR(factGraph, order)){
+      //found a solution
+      phase = Phase::DONE;
+      return getPRSolution();
+    }
+    break;
+  case Phase::LBP:
+    // doLoopyBP
+    result = doLoopyBP();//TODO:: run more than once? split up time so can stop in the middle?
+    phase = Phase::GBP;
+  case Phase::GBP:
+    // do Gen BP
+    if (result) // if there's no problems encountered
+      result = doGeneralBP();		
+    phase = Phase::ITERCOND;
+  case Phase::ITERCOND:
+    // do iterCond
+    if (result && !isExact)
+      result = doIterativeConditioning();
+   
+    
   }
 
-  bool result = true;
-  // doLoopyBP
-  result = doLoopyBP();
-  // do Gen BP
-  if (!result)
-    result = doGeneralBP();		
-  // do iterCond
-  bool isExact = false; //TODO:: FIX THIS
-  if (!result && !isExact)
-    result = doIterativeConditioning();
 
 
-  // get solution to return
-  return getPRSolution();
-   
+  
+  	
 }
 
-mex::vector<mex::Factor> BpInterface::solveMAR(){
-  bool result = true;
-  // doLoopyBP
-  // TODO:: check return types to see if we need to keep going
-  result = doLoopyBP();
-  // do Gen BP
-  if (!result)
-    result = doGeneralBP();
-  // do iterCond
-  bool isExact = false; //TODO:: FIX THIS  if (!result && !isExact)
-  if(!result && !isExact)
-    result = doIterativeConditioning();
-	
-	
-  // get solution to return
-  return getMARSolution();
-	
-}
+/**
+   Gets the current solution for PR task
 
-
+   returns -1 if the task being solved wasn't PR
+ */
 double BpInterface::getPRSolution(){
   // PR Solution
+  if (task != Task::PR){
+    if(doVerbose)
+      printf("Wrong solution function for task\n");
+    return -1;
+  }
+    
   if (doVerbose)
     std::cout << "Got PR Solution: " << logZ / c_log10 << "\n";
   return  logZ / c_log10;
 }
 
+/**
+   Gets the current solution for MAR task
+
+   returns empty vector if the task being solved wasn't MAR
+ */
+
 mex::vector<Factor> BpInterface::getMARSolution(){
   // MAR solution
+
+ if (task != Task::MAR){
+    if(doVerbose)
+      printf("Wrong solution function for task\n");
+    return mex::vector<Factor>();
+  }
+ 
   // fs: mex::vector<Factor>& fs
   // os << "MAR\n";
   // os << fs.size() << " ";
@@ -315,7 +381,7 @@ bool BpInterface::doLoopyBP(){
 
   if (doVerbose)
     std::cout << "Model has " << nvar << " variables, " << _lbp.nFactors() << " factors\n";
-  if (lbpIter != 0 && lbpTime > 0) {
+  if (lbpIter != 0 && lbpTime > 0) { // TODO:: change if to while?
     _lbp.setProperties("Schedule=Priority,Distance=L1");
     _lbp.setStopIter(lbpIter);
     _lbp.setStopMsg(lbpErr);
@@ -324,6 +390,7 @@ bool BpInterface::doLoopyBP(){
     _lbp.init();
 		
     _lbp.run();
+  
     switch (task) {
     case Task::PR: 
       logZ = _lbp.logZ();
@@ -335,13 +402,14 @@ bool BpInterface::doLoopyBP(){
       }
     }break;
     }
+  
     if (doVerbose)
       std::cout << "LBP " << _lbp.logZ() / ln10 << "\n";
-		
+  }		
     _lbp.reparameterize();                                         // Convert loopy bp results to model
     factGraph = graphModel(_lbp.factors());
     return true;
-  }
+  
 
 }
 /*
@@ -354,7 +422,6 @@ bool BpInterface::doGeneralBP() {
   double ln10 = std::log(10);
   bool res = true;
   mex::gbp _gbp(factGraph.factors());                      // Create a GBP object for later use
-  bool exact = false;
   size_t ibound = iboundInit, InducedWidth=10000;
   
   order = computeVariableOrder(nOrders,timeOrder);
@@ -436,7 +503,7 @@ bool BpInterface::doGeneralBP() {
 	return true;
       }
 	
-
+      //TODO;: FIX THIS 
     } catch (std::exception& e) {
       // 	if (_gbp.getDamping() > 0.25) {
       // 	  doneGBP = true;
@@ -619,7 +686,8 @@ bool BpInterface::doIterativeConditioning(){
 /*
   Compute an elimination order
   Params: numTries: the number of orders to compute and score
-  timeLimit: max amount of time to spend searching for an order
+  timeLimit: max amount of time (in seconds)  to spend searching for an order
+  score: output parameter; where the score
 */
 mex::VarOrder BpInterface::computeVariableOrder(int numTries, double timeLimit){
   mex::VarOrder order; 				// start with a random order in case the model is very dense
@@ -633,7 +701,7 @@ mex::VarOrder BpInterface::computeVariableOrder(int numTries, double timeLimit){
     score = factGraph.order(mex::graphModel::OrderMethod::WtMinFill, order, nExtra, score);
     ++iOrder;
   }
-  //if (score < memUseRandom)
+    //if (score < memUseRandom)
   // int InducedWidth = factGraph.inducedWidth(order);
   if(doVerbose)
     std::cout << "Best order of " << iOrder << " has induced width " << factGraph.inducedWidth(order) << ", score " << score << "\n";
@@ -672,11 +740,15 @@ double BpInterface::solveMBE(const graphModel& gm, const mex::VarOrder& order) {
   return mb.logZ();
 }
 
-
+/**
+   Try to compute PR exactly
+   
+   returns true if successful
+ */
 bool BpInterface::tryExactPR(const mex::graphModel& gm, const mex::VarOrder& order) {
   try {
     double mbCutoff = MemLimit / sizeof(double)* 1024 * 1024;     // translate memory into MBE cutoff
-    bool isExact = true;
+    isExact = true;
     mex::mbe mb(gm.factors());
     mb.setOrder(order);
     mb.setProperties("ElimOp=SumUpper,sBound=inf,DoMatch=1,DoMplp=0,DoFill=0,DoJG=0,DoHeur=0");
