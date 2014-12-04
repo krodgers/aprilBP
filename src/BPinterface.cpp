@@ -17,6 +17,19 @@ using namespace lgbp;
 using namespace mex;
 using namespace std;
 
+void BpInterface::printFactors(mex::vector<Factor> flist){
+  for(int f = 0; f < flist.size(); f++){
+    printf("flist[%d]: nvar(%d), numStates(%d)\n", f, flist[f].nvar(), flist[f].nrStates());
+    printf("flist[%d]: values:", f) ;
+    const double *values = flist[f].table();
+    for (int v = 0; v < flist[f].nrStates(); v++){
+      printf("%f  ", values[f]);
+    }
+    printf("\n");
+  }
+}
+
+
 /*
   Initializes parameters and data structures
 
@@ -36,7 +49,7 @@ bool BpInterface::initialize(int argc, char** argv){
     return false;
   }
   allGood = readEvidenceFile();
-  if(!allGood)
+  if(!allGood && vm.count("evidence"))
     return false;
   
   // set up data structures
@@ -44,10 +57,13 @@ bool BpInterface::initialize(int argc, char** argv){
 
   // initialize other member variables
   memUseRandom = std::exp(40.0);
-  bool isExact = false;
-  phase = Phase::EXACT;
+  isExact = false;
+  phase = Phase::LBP;
   logZ = 0;
   bel = mex::vector<Factor>();
+  
+  printf("Factors:\n");
+  printFactors(facts);
   return true;
 
 }
@@ -88,6 +104,10 @@ bool BpInterface::readEvidenceFile(){
   ifstream is2;
   if (vm.count("evidence")) {
     is2.open(vm["evidence"].as<std::string>().c_str());
+    // Check for empty file
+    int c = is2.peek();  // peek character
+    if ( c == EOF )
+      return false;
   }
   if (is2.is_open()) {
     if (doVerbose)
@@ -177,7 +197,9 @@ bool BpInterface::parseCommandOptions(int argc, char** argv){
 
 
   /*** ARGUMENT CHECKING *************************************************************/
-  if (vm.count("help")) { std::cout << desc << "\n"; return false; }
+  if (vm.count("help")) { 
+    std::cout << desc << "\n"; 
+    return false; }
   if (vm.count("verbose")) 
     doVerbose = true; 
   else 
@@ -255,8 +277,8 @@ bool BpInterface::parseCommandOptions(int argc, char** argv){
 bool BpInterface::estimateComplexity(int &timeComplexity, int &memComplexity){
   //TODO:: come up with something to return
   // compute induced width of a few orderings and return textbook estimates?	
-  int score;
-  order = computeVariableOrder(nOrders, 3/*, score*/);
+  double score;
+  score = computeVariableOrder(nOrders, 3);
   
   timeComplexity = score;
   memComplexity = factGraph.inducedWidth(order) * nvar;
@@ -283,19 +305,20 @@ bool BpInterface::runInference(int timeLimit){
   switch(phase){
   case Phase::DONE: 
     return true;
-  case Phase::EXACT:  
-    order = computeVariableOrder(nOrders, timeOrder);
-    
-    if (tryExactPR(factGraph, order)){
-      //found a solution
-      phase = Phase::DONE;
-      return getPRSolution();
-    }
-    break;
   case Phase::LBP:
     // doLoopyBP
     result = doLoopyBP();//TODO:: run more than once? split up time so can stop in the middle?
-    phase = Phase::GBP;
+    phase = Phase::EXACT;
+  
+  case Phase::EXACT:  
+    computeVariableOrder(nOrders, timeOrder);
+    
+    if (tryExactPR(factGraph, order)){
+      //found a solution
+      phase = Phase::GBP;
+      return getPRSolution();
+    }
+    break;
   case Phase::GBP:
     // do Gen BP
     if (result) // if there's no problems encountered
@@ -408,6 +431,7 @@ bool BpInterface::doLoopyBP(){
   }		
     _lbp.reparameterize();                                         // Convert loopy bp results to model
     factGraph = graphModel(_lbp.factors());
+    printFactors(_lbp.factors());
     return true;
   
 
@@ -423,8 +447,9 @@ bool BpInterface::doGeneralBP() {
   bool res = true;
   mex::gbp _gbp(factGraph.factors());                      // Create a GBP object for later use
   size_t ibound = iboundInit, InducedWidth=10000;
-  
-  order = computeVariableOrder(nOrders,timeOrder);
+  double score;
+
+  score = computeVariableOrder(nOrders,timeOrder);
   if (vm.count("ijgp"))
     _gbp.setMinimal(true);      // use "ijgp-like" regions? (true = remove all with c=0)
   else
@@ -687,10 +712,11 @@ bool BpInterface::doIterativeConditioning(){
   Compute an elimination order
   Params: numTries: the number of orders to compute and score
   timeLimit: max amount of time (in seconds)  to spend searching for an order
-  score: output parameter; where the score
+  
+  returns score of the ordering
 */
-mex::VarOrder BpInterface::computeVariableOrder(int numTries, double timeLimit){
-  mex::VarOrder order; 				// start with a random order in case the model is very dense
+double  BpInterface::computeVariableOrder(int numTries, double timeLimit){
+  // start with a random order in case the model is very dense
   double score = factGraph.order(mex::graphModel::OrderMethod::Random, order, 0, memUseRandom);
 
   // Otherwise, calculate elimination order(s) ////////////////////////////////////
@@ -706,6 +732,7 @@ mex::VarOrder BpInterface::computeVariableOrder(int numTries, double timeLimit){
   if(doVerbose)
     std::cout << "Best order of " << iOrder << " has induced width " << factGraph.inducedWidth(order) << ", score " << score << "\n";
 
+  return score;
 }
 
 

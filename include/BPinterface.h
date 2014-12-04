@@ -63,6 +63,8 @@ namespace lgbp {
     double getPRSolution();
     mex::vector<Factor> getMARSolution();
     bool runInference(int timeLimit); // runs the inference algorithm for a small amount of time. Meant to be called repeatedly
+    void printFactors(mex::vector<mex::Factor> flist);
+
 
   private:
     //
@@ -108,7 +110,7 @@ namespace lgbp {
     bool doGeneralBP();    // Does General BP on factGraph
     bool doIterativeConditioning();
     bool parseCommandOptions(int argc, char** argv);    // Puts command line options in vm
-    mex::VarOrder computeVariableOrder(int numTries, double timeLimit);    // Computes a variable order
+    double  computeVariableOrder(int numTries, double timeLimit);
     bool fitsMBE(const graphModel& gm, const mex::VarOrder& order, const VarSet* cond);
     double solveMBE(const graphModel& gm, const mex::VarOrder& order);
     bool tryExactPR(const graphModel& gm, const mex::VarOrder& order);

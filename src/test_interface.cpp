@@ -13,20 +13,32 @@ using namespace std;
 using lgbp::BpInterface;
 
 int main(int argc, char** argv){
+  // set up args so don't have to worry about command line parameters for debugging
+  // argc = 6;
+  // char** params = (char**) malloc(sizeof(char*) * 5);
+  // params[0] = "linux/build/bp_interface"; 
+  // params[1] = "-f";
+  // params[2] = "../data/test.uai";
+  // params[3] = "-T";
+  // params[4] = "PR";
+  // params[5] = "--verbose";
+  
+  
   printf("Test Iterface\n");
   printf("Starting...\n");
   BpInterface bpi;
   printf("Initializing\n");
   bool success = bpi.initialize(argc,argv);
+ //free(params);
   if(!success){
     printf("Failed Initializing\n");
     return 0;
   }
-   
- 
+  
   printf("Analyzing\n");
   int time, memory;
   bpi.estimateComplexity(time, memory);
+  printf("Estimated %d time and %d memory\n", time, memory);
 
   printf("Beginning Inference\n");
   bpi.runInference(120);

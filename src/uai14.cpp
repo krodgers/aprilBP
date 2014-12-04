@@ -92,6 +92,19 @@ void writeMMAP(const char* outfile, mex::vector<uint32_t> xhat) {
   os.close();
 }
 
+void printFactors(mex::vector<Factor> flist){
+  for (size_t f=0;f<flist.size();++f)  {        
+    printf("flist[%d]: nvar(%d), numStates(%d)\n", f, flist[f].nvar(), flist[f].nrStates());
+    printf("flist[%d]: values:", f) ;
+    const double *values = flist[f].table();
+    for (int v = 0; v < flist[f].nrStates(); v++){
+      printf("%f  ", values[f]);
+    }
+    printf("\n");
+    
+  }
+}
+
 
 bool fitsMBE(const graphModel& gm, const mex::VarOrder& order, const VarSet* cond=NULL);
 double solveMBE(const graphModel& gm, const mex::VarOrder& order);
@@ -204,12 +217,16 @@ int main(int argc, char* argv[])
   if (!is.is_open()) throw std::runtime_error("Failed to open problem file");
   mex::vector<Factor> flist = Factor::readUai10(is);
   size_t nvar=0;
-  for (size_t f=0;f<flist.size();++f)                        // find maximum variable label
-    if (flist[f].nvar() > 0)
+  for (size_t f=0;f<flist.size();++f)  {                      // find maximum variable label
+    // DELETE ME ////
+    printFactors(flist);
+    if (flist[f].nvar() > 0){
       nvar=std::max(nvar,(size_t)(flist[f].vars().rbegin()->label()+1));
+    }
+  }
   bel.resize(nvar);
   xhat.resize(nvar);
-
+  
 
   /*** READ IN EVIDENCE FILE *********************************************************/
   VarSet evVar;
@@ -302,6 +319,12 @@ int main(int argc, char* argv[])
 
       _lbp.reparameterize();                                         // Convert loopy bp results to model
       fg=graphModel(_lbp.factors());
+      // DELETE ME
+      printf("Loopy BP factors\n");
+      printFactors(_lbp.factors());
+      printf("FG Factors\n");
+      printFactors(fg.factors());
+      //////////////////////
     }
   } else if (task==Task::MPE) {
     mex::mplp _mplp(flist);
@@ -615,7 +638,6 @@ int main(int argc, char* argv[])
   return 0;
 
 }
-
 
 bool fitsMBE(const graphModel& gm, const mex::VarOrder& order, const VarSet* cond) {
   double mbCutoff = MemLimit/sizeof(double)*1024*1024;     // translate memory into MBE cutoff
