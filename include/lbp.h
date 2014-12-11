@@ -193,7 +193,9 @@ public:
       if (edge(e)!=EdgeID::NO_EDGE && isVarNode(edge(e).second)) {
 #ifdef USE_LOG
         // Don't take message zeros as gospel (otherwise leads to numerical roundoff errors)
-        for (size_t i=0;i<_msg[e].nrStates();++i) if (_msg[e][i]<-5) _msg[e][i]=-5;
+        for (size_t i=0;i<_msg[e].nrStates();++i) 
+	  if (_msg[e][i]<-5) 
+	    _msg[e][i]=-5;
         _factors[edge(e).first]  -= _msg[e];
         _factors[edge(e).second] += _msg[e];
 #else

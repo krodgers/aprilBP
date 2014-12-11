@@ -122,7 +122,7 @@ int main(int argc, char* argv[])
   Task task;
   mex::vector<Factor> bel;
   mex::vector<uint32_t> xhat;
-
+ 
 
   po::options_description desc("Available options");
   desc.add_options()
@@ -208,7 +208,12 @@ int main(int argc, char* argv[])
   }
 
   std::cout<<"Memory limit set to "<<MemLimit<<"mb\n";
-
+  //DELETE ME/////
+  lbpTime = 4;
+  gbpTime = 0;
+  nOrders = 0;
+  doCond = 0;
+  ////////////////////////////////
   doVerbose=true;
 
   /*** READ IN PROBLEM FILE **********************************************************/
@@ -219,11 +224,12 @@ int main(int argc, char* argv[])
   size_t nvar=0;
   for (size_t f=0;f<flist.size();++f)  {                      // find maximum variable label
     // DELETE ME ////
-    printFactors(flist);
     if (flist[f].nvar() > 0){
       nvar=std::max(nvar,(size_t)(flist[f].vars().rbegin()->label()+1));
     }
   }
+  printFactors(flist);
+    
   bel.resize(nvar);
   xhat.resize(nvar);
   
@@ -273,6 +279,7 @@ int main(int argc, char* argv[])
     if (!qis.is_open()) { std::cout<<" does not exist!\n"; return 1; }
     int nMAP; qis >> nMAP;
     for (size_t i=0; i<nMAP; ++i) {
+
       size_t v; qis >> v;
       maxVars |= Var(v,0);
     }
@@ -669,6 +676,15 @@ bool tryExactPR(const graphModel& gm, const mex::VarOrder& order) {
     double mbCutoff = MemLimit/sizeof(double)*1024*1024;     // translate memory into MBE cutoff
     bool isExact = true;
     mex::mbe mb(gm.factors());
+
+    ////////////////DELETE ME////////////////////
+    printf("MBE Factors\n");
+    printFactors(mb._gmo.factors());
+
+    /////////////////////////////////////
+    
+
+
     mb.setOrder(order);
     mb.setProperties("ElimOp=SumUpper,sBound=inf,DoMatch=1,DoMplp=0,DoFill=0,DoJG=0,DoHeur=0");
     mb.setIBound(100); double mbMem = mb.simulateMemory(NULL,NULL,mbCutoff,&isExact);

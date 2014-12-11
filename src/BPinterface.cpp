@@ -12,6 +12,7 @@
 
 #include "mbe.h"
 
+#define c_log10 std::log(10)
 
 using namespace lgbp;
 using namespace mex;
@@ -62,8 +63,14 @@ bool BpInterface::initialize(int argc, char** argv){
   logZ = 0;
   bel = mex::vector<Factor>();
   
+  //// DELETE ME
   printf("Factors:\n");
   printFactors(facts);
+  lbpTime = 4;
+  gbpTime = 0;
+  nOrders = 0;
+  doCond = 0;
+  ////////////////////////////
   return true;
 
 }
@@ -400,7 +407,6 @@ mex::vector<Factor> BpInterface::getMARSolution(){
 bool BpInterface::doLoopyBP(){
   /*** LOOPY BELIEF PROPAGATION ******************************************************/
   mex::lbp _lbp(facts);
-  double ln10 = std::log(10);
 
   if (doVerbose)
     std::cout << "Model has " << nvar << " variables, " << _lbp.nFactors() << " factors\n";
@@ -427,14 +433,15 @@ bool BpInterface::doLoopyBP(){
     }
   
     if (doVerbose)
-      std::cout << "LBP " << _lbp.logZ() / ln10 << "\n";
-  }		
+      std::cout << "LBP " << _lbp.logZ() / c_log10 << "\n";
     _lbp.reparameterize();                                         // Convert loopy bp results to model
     factGraph = graphModel(_lbp.factors());
     printFactors(_lbp.factors());
-    return true;
+    
+  }		
   
-
+  return true;
+   
 }
 /*
   Runs General Belief Propagation 
@@ -443,7 +450,6 @@ bool BpInterface::doLoopyBP(){
   returns true if successfully completes
 */
 bool BpInterface::doGeneralBP() {
-  double ln10 = std::log(10);
   bool res = true;
   mex::gbp _gbp(factGraph.factors());                      // Create a GBP object for later use
   size_t ibound = iboundInit, InducedWidth=10000;
@@ -503,7 +509,7 @@ bool BpInterface::doGeneralBP() {
 	}
       }
       if (doVerbose)
-	std::cout << "GBP " << _gbp.logZ() / ln10 << "\n";
+	std::cout << "GBP " << _gbp.logZ() / c_log10 << "\n";
       if (_gbp.dObj() < gbpObj){
 	if (doVerbose)
 	  std::cout << "Reached objective tolerance\n";
@@ -556,7 +562,6 @@ bool BpInterface::doGeneralBP() {
 
 bool BpInterface::doIterativeConditioning(){
 
-  double ln10 = std::log(10);
   if (order.size() == 0)
     order = factGraph.order(mex::graphModel::OrderMethod::MinWidth);  // need an order if none yet...
   mex::gbp _gbp(mex::vector<Factor>());  // !!! blank out GBP object; restore memory
@@ -685,7 +690,7 @@ bool BpInterface::doIterativeConditioning(){
 	  break;
 	}
 	if (doVerbose)
-	  std::cout << "Conditioning " << cond << " => " << lnZtot << " (" << lnZtot / ln10 << ")\n";
+	  std::cout << "Conditioning " << cond << " => " << lnZtot << " (" << lnZtot / c_log10<< ")\n";
 
       }
       catch (std::exception& e) {
@@ -777,6 +782,14 @@ bool BpInterface::tryExactPR(const mex::graphModel& gm, const mex::VarOrder& ord
     double mbCutoff = MemLimit / sizeof(double)* 1024 * 1024;     // translate memory into MBE cutoff
     isExact = true;
     mex::mbe mb(gm.factors());
+    
+
+    ////////////////DELETE ME////////////////////
+    printf("MBE Factors\n");
+    printFactors(mb._gmo.factors());
+
+    /////////////////////////////////////
+
     mb.setOrder(order);
     mb.setProperties("ElimOp=SumUpper,sBound=inf,DoMatch=1,DoMplp=0,DoFill=0,DoJG=0,DoHeur=0");
     mb.setIBound(100); double mbMem = mb.simulateMemory(NULL, NULL, mbCutoff, &isExact);
@@ -784,9 +797,9 @@ bool BpInterface::tryExactPR(const mex::graphModel& gm, const mex::VarOrder& ord
       if (doVerbose)
 	std::cout << "Attempting exact solve; mbMem=" << mbMem << " vs " << mbCutoff << " (" << MemLimit << ")\n";
       mb.init();
-      logZ = mb.logZ();
+      logZ = mb.logZ() / c_log10;
       if(doVerbose)
-	std::cout << "Exact solution by MBE: " << mb.logZ() / std::log(10) << "\n";
+	std::cout << "Exact solution by MBE: " << mb.logZ() / c_log10 << "\n";
       return true;
     }
   }
