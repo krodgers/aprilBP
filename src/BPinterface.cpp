@@ -1,4 +1,4 @@
-/*
+ /*
   Belief propagation interface for APPRIL
 
 
@@ -35,7 +35,7 @@ void BpInterface::printFactors(mex::vector<Factor> flist){
   Initializes parameters and data structures
 
   Returns true if successful and false otherwise
- */
+*/
 bool BpInterface::initialize(int argc, char** argv){
   // set up algorithm options
   bool allGood = parseCommandOptions(argc, argv);
@@ -65,11 +65,10 @@ bool BpInterface::initialize(int argc, char** argv){
   
   //// DELETE ME
   printf("Factors:\n");
-  printFactors(facts);
-  lbpTime = 4;
-  gbpTime = 0;
-  nOrders = 0;
-  doCond = 0;
+  //  printFactors(facts);
+  ///lbpTime = 40;
+  // gbpTime = 0;
+  // doCond = 0;
   ////////////////////////////
   return true;
 
@@ -89,7 +88,7 @@ mex::vector<Factor> BpInterface::readUaiFile(){
     return mex::vector<Factor>(); // return empty vector
   }
 	
-  //std::cout << "Reading model file: " << probName << "\n";
+  std::cout << "Reading model file: " << probName << "\n";
   ifstream is; 
   is.open(probName);
   if (!is.is_open())
@@ -279,8 +278,8 @@ bool BpInterface::parseCommandOptions(int argc, char** argv){
    Gives a shot in the dark guesstimate about the complexity
 
    parameters:  timeComplexity: out param; where the time complexity is stored (secs)
-                memComplexity: out param; where the memory complexity is stored
- */
+   memComplexity: out param; where the memory complexity is stored
+*/
 bool BpInterface::estimateComplexity(int &timeComplexity, int &memComplexity){
   //TODO:: come up with something to return
   // compute induced width of a few orderings and return textbook estimates?	
@@ -300,24 +299,33 @@ bool BpInterface::estimateComplexity(int &timeComplexity, int &memComplexity){
    Does NOT return a solution.  Call getXSolution for the solution for task X
 
    returns true if nothing's gone wrong
- */
+*/
 bool BpInterface::runInference(int timeLimit){
   // todo:: implement timing
 
-  if(isExact) // already done all the inference possible
+  if(isExact){ // already done all the inference possible
+    printf("IsExact Phase true\n");
     return true;
+}
   bool result;
   // Try exact solution
   //TODO:: where to first compute order?
   switch(phase){
   case Phase::DONE: 
     return true;
+    
   case Phase::LBP:
     // doLoopyBP
+    //// DELETE ME ////
+    printf("Phase:LBP\n");
+    ///////////////////
     result = doLoopyBP();//TODO:: run more than once? split up time so can stop in the middle?
     phase = Phase::EXACT;
-  
+    
   case Phase::EXACT:  
+    //// DELETE ME ////
+    printf("Phase:Exact\n");
+    ///////////////////
     computeVariableOrder(nOrders, timeOrder);
     
     if (tryExactPR(factGraph, order)){
@@ -326,6 +334,7 @@ bool BpInterface::runInference(int timeLimit){
       return getPRSolution();
     }
     break;
+    
   case Phase::GBP:
     // do Gen BP
     if (result) // if there's no problems encountered
@@ -349,7 +358,7 @@ bool BpInterface::runInference(int timeLimit){
    Gets the current solution for PR task
 
    returns -1 if the task being solved wasn't PR
- */
+*/
 double BpInterface::getPRSolution(){
   // PR Solution
   if (task != Task::PR){
@@ -359,20 +368,24 @@ double BpInterface::getPRSolution(){
   }
     
   if (doVerbose)
-    std::cout << "Got PR Solution: " << logZ / c_log10 << "\n";
-  return  logZ / c_log10;
+    std::cout << "Got PR Solution: " << logZ << "\n";
+
+  ////////////////// DELETE ME ///////////////
+  std::cout<<"PR_solution: "<< logZ<<"\n";
+  ///////////////////////////////
+  return  logZ;
 }
 
 /**
    Gets the current solution for MAR task
 
    returns empty vector if the task being solved wasn't MAR
- */
+*/
 
 mex::vector<Factor> BpInterface::getMARSolution(){
   // MAR solution
 
- if (task != Task::MAR){
+  if (task != Task::MAR){
     if(doVerbose)
       printf("Wrong solution function for task\n");
     return mex::vector<Factor>();
@@ -406,7 +419,13 @@ mex::vector<Factor> BpInterface::getMARSolution(){
 */
 bool BpInterface::doLoopyBP(){
   /*** LOOPY BELIEF PROPAGATION ******************************************************/
+  //// DELETE ME ////////////
+  printf("doLoopyBP\n");
+  printFactors(facts);
+
+  ////////////////////
   mex::lbp _lbp(facts);
+
 
   if (doVerbose)
     std::cout << "Model has " << nvar << " variables, " << _lbp.nFactors() << " factors\n";
@@ -430,13 +449,22 @@ bool BpInterface::doLoopyBP(){
 	  bel[v] = _lbp.belief(_lbp.localFactor(v));
       }
     }break;
-    }
-  
+    
+}
+    logZ = _lbp.logZ() / c_log10;
+    
     if (doVerbose)
-      std::cout << "LBP " << _lbp.logZ() / c_log10 << "\n";
+      std::cout << "LBP solution: " << _lbp.logZ() / c_log10 << "\n";
     _lbp.reparameterize();                                         // Convert loopy bp results to model
     factGraph = graphModel(_lbp.factors());
-    printFactors(_lbp.factors());
+    //// DELETE ME ////////////
+    //printf("LBP factors after reparam\n");
+    //    printFactors(_lbp.factors());
+    //printf("new graph factors after reparam\n");
+    //printFactors(factGraph.factors());
+
+    printf("LBP Solution: %g\n", getPRSolution());
+    ////////////////////
     
   }		
   
@@ -450,6 +478,13 @@ bool BpInterface::doLoopyBP(){
   returns true if successfully completes
 */
 bool BpInterface::doGeneralBP() {
+    //// DELETE ME ////////////
+    printf("doGeneralBp\n");
+    printf("graph factors\n");
+    //  printFactors(factGraph.factors());
+    ////////////////////
+
+
   bool res = true;
   mex::gbp _gbp(factGraph.factors());                      // Create a GBP object for later use
   size_t ibound = iboundInit, InducedWidth=10000;
@@ -721,23 +756,53 @@ bool BpInterface::doIterativeConditioning(){
   returns score of the ordering
 */
 double  BpInterface::computeVariableOrder(int numTries, double timeLimit){
-  // start with a random order in case the model is very dense
-  double score = factGraph.order(mex::graphModel::OrderMethod::Random, order, 0, memUseRandom);
+  ///////////// DELETE ME /////////////
+  printf("ComputeVariableOrder\n");
+  ////////////
+  // mex::VarOrder order; 				// start with a random order in case the model is very dense
+  double score = factGraph.order( mex::graphModel::OrderMethod::Random, order, 0, memUseRandom );
+  
+  // Check for pre-specified elimination order file
+  const char *orderFile = NULL;			
+  if (vm.count("order-file")) { 
+    orderFile = vm["order-file"].as<std::string>().c_str(); }
+  ifstream orderIStream; if (orderFile!=NULL) orderIStream.open(orderFile);
+  if (orderIStream.is_open()) { 
+    // If we were given an input file with an elimination ordering, just use that
+    if(doVerbose) std::cout << "Reading elimination order from "<<orderFile<<"\n";
+    size_t ordersize;  orderIStream>>ordersize;
 
-  // Otherwise, calculate elimination order(s) ////////////////////////////////////
-  double startOrder = timeSystem();
-  size_t iOrder = 0;
-  // Try to build new orders until time or count limit reached ////////////////////
-  while (iOrder < numTries && (timeSystem() - startOrder < timeLimit)) {
-    score = factGraph.order(mex::graphModel::OrderMethod::WtMinFill, order, nExtra, score);
-    ++iOrder;
-  }
+
+    ///////////////////DELETE ME ////////////////////
+    int temp = order.size();
+    /////////////////////////////////
+
+
+    assert(ordersize == order.size());
+    for (size_t i=0;i<order.size();++i) { 
+      size_t tmp;  orderIStream>>tmp; order[i]=tmp;  };
+    orderIStream.close();
+      
+    return 0;
+
+  }else {
+    // Otherwise, calculate elimination order(s) ////////////////////////////////////
+    double startOrder = timeSystem();
+    size_t iOrder = 0;
+    // Try to build new orders until time or count limit reached ////////////////////
+    while (iOrder < numTries && (timeSystem() - startOrder < timeLimit)) {
+      score = factGraph.order(mex::graphModel::OrderMethod::WtMinFill, order, nExtra, score);
+      ++iOrder;
+    }
     //if (score < memUseRandom)
-  // int InducedWidth = factGraph.inducedWidth(order);
-  if(doVerbose)
-    std::cout << "Best order of " << iOrder << " has induced width " << factGraph.inducedWidth(order) << ", score " << score << "\n";
+    // int InducedWidth = factGraph.inducedWidth(order);
+    if(doVerbose)
+      std::cout << "Best order of " << iOrder << " has induced width " << factGraph.inducedWidth(order) << ", score " << score << "\n";
 
   return score;
+}
+ 
+  
 }
 
 
@@ -776,17 +841,18 @@ double BpInterface::solveMBE(const graphModel& gm, const mex::VarOrder& order) {
    Try to compute PR exactly
    
    returns true if successful
- */
+*/
 bool BpInterface::tryExactPR(const mex::graphModel& gm, const mex::VarOrder& order) {
   try {
     double mbCutoff = MemLimit / sizeof(double)* 1024 * 1024;     // translate memory into MBE cutoff
     isExact = true;
     mex::mbe mb(gm.factors());
     
-
     ////////////////DELETE ME////////////////////
+    //  order[0] = 0; order[1] = 1;
     printf("MBE Factors\n");
-    printFactors(mb._gmo.factors());
+    //    printFactors(mb._gmo.factors());
+    printf("order: %u %u\n", order[0], order[1]);
 
     /////////////////////////////////////
 

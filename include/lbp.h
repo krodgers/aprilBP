@@ -152,7 +152,10 @@ public:
         f=forder[n];                                              //   get next factor from list
         if (++n == forder.size()) n=0; 
       }
+      /////////////////// DELETE ME /////////////
+      printf("\t\t\tLBP: priority.top() %d\t\t", priority.top().second);
 
+      /////////////////////////////
       if (_sched!=Schedule::Flood) {                              // For non-"flood" schedules,
         Factor logF = log0(factor(f));                            // compute new belief and update objective:
         if (_iter % nFactors()==0) dObj=0.0;                      //   dObj measures per round of all factors
@@ -180,6 +183,11 @@ public:
       }
 
       if (timeSystem()>print) { print=timeSystem()+1; std::cout<<"iter "<<_iter/nFactors()<<"; lnZ: "<<_lnZ<<"\n"; }
+      /////////////////// DELETE ME /////////////
+      printf("\t\t\tLBP: iter: %d lnZ:%g\n", _iter, _lnZ);
+      
+      /////////////////////////////
+
       _iter++;
     }
     std::cout<<"LBP: "<<_iter/nFactors()<<"it, "<<timeSystem()-startTime<<"sec\n";

@@ -44,7 +44,8 @@ int main(int argc, char** argv){
   bpi.runInference(120);
   printf("Getting solution\n");
   double ans =  bpi.getPRSolution();
-  printf("Solution returned: %.4f\n",ans);
+  printf("Solution returned:%g \n",ans);
+  std::cout<<ans<<"\n";
   printf("Quitting\n");
   return 0;
 }

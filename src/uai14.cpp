@@ -55,6 +55,11 @@ void writePR(const char* outfile, double logZ) {
   ofstream os(outfile);
   //os.precision(8); os.setf(ios::fixed,ios::floatfield);
   //os<<"PR\n1\n"<<logZ/c_log10<<"\n";		// !!! 2011 PIC version: need "1" evidence
+
+
+  /////// DELETE ME ///////////////
+  std::cout<<"PR_solution: "<< logZ<<"\n";
+  ///////////////////////////////
   os<<"PR\n"<<logZ/c_log10<<"\n";
   os.close();
   std::cout<<"Wrote PR : "<<logZ/c_log10<<"\n";
@@ -208,13 +213,6 @@ int main(int argc, char* argv[])
   }
 
   std::cout<<"Memory limit set to "<<MemLimit<<"mb\n";
-  //DELETE ME/////
-  lbpTime = 4;
-  gbpTime = 0;
-  nOrders = 0;
-  doCond = 0;
-  ////////////////////////////////
-  doVerbose=true;
 
   /*** READ IN PROBLEM FILE **********************************************************/
   std::cout<<"Reading model file: "<<probName<<"\n";
@@ -223,13 +221,16 @@ int main(int argc, char* argv[])
   mex::vector<Factor> flist = Factor::readUai10(is);
   size_t nvar=0;
   for (size_t f=0;f<flist.size();++f)  {                      // find maximum variable label
-    // DELETE ME ////
     if (flist[f].nvar() > 0){
       nvar=std::max(nvar,(size_t)(flist[f].vars().rbegin()->label()+1));
     }
   }
-  printFactors(flist);
-    
+
+  /////////////// DELETE ME ////////////////
+  printf("\nInitialized Factors: \n");
+  //  printFactors(flist);
+  printf("\n\n");
+  /////////////////////////////////
   bel.resize(nvar);
   xhat.resize(nvar);
   
@@ -301,6 +302,11 @@ int main(int argc, char* argv[])
 
 
   /*** LOOPY BELIEF PROPAGATION ******************************************************/
+  ///////////////////// DELETE ME ////////////////////////
+  printf("Beginning Loopy BP\n");
+  printf("BP factors:\n");
+  printFactors(flist);
+  //////////////////////////////////////////
   mex::graphModel fg(flist);
 
   if (task==Task::PR || task==Task::MAR || task==Task::MMAP) {
@@ -326,11 +332,11 @@ int main(int argc, char* argv[])
 
       _lbp.reparameterize();                                         // Convert loopy bp results to model
       fg=graphModel(_lbp.factors());
-      // DELETE ME
-      printf("Loopy BP factors\n");
-      printFactors(_lbp.factors());
+      /////////////////////// DELETE ME ///////////////////////////
+      printf("Loopy BP factors after reparameterization \n");
+      //printFactors(_lbp.factors());
       printf("FG Factors\n");
-      printFactors(fg.factors());
+      // printFactors(fg.factors());
       //////////////////////
     }
   } else if (task==Task::MPE) {
@@ -368,6 +374,9 @@ int main(int argc, char* argv[])
 
 
   /*** BUILD JUNCTION GRAPH & ASSESS MEMORY USE ***************************/
+  //////////////// DELETE ME //////////////////
+  printf("Build Junction Graph and  Assess Memory Use\n");
+  /////////////////////////////
   bool exact = false;
   size_t ibound = iboundInit, InducedWidth=10000;
   mex::VarOrder order; 				// start with a random order in case the model is very dense
@@ -380,7 +389,8 @@ int main(int argc, char* argv[])
     if (orderIStream.is_open()) { 
       // If we were given an input file with an elimination ordering, just use that
       std::cout << "Reading elimination order from "<<orderFile<<"\n";
-      size_t ordersize;  orderIStream>>ordersize; assert(ordersize == order.size());
+      size_t ordersize;  orderIStream>>ordersize; 
+      assert(ordersize == order.size());
       for (size_t i=0;i<order.size();++i) { size_t tmp;  orderIStream>>tmp; order[i]=tmp;  };
       orderIStream.close();
     } else {
@@ -390,6 +400,7 @@ int main(int argc, char* argv[])
       // Try to build new orders until time or count limit reached ////////////////////
       while (iOrder < nOrders && (timeSystem()-startOrder < timeOrder)) {
 	score = fg.order(mex::graphModel::OrderMethod::WtMinFill, order, nExtra, score);
+	fg.order
 	++iOrder;
       }
       if (score < memUseRandom) InducedWidth = fg.inducedWidth(order);
@@ -518,6 +529,13 @@ int main(int argc, char* argv[])
   // =1 => previous code; > 1 is subsequent code
   // need to include exact lnZ check here also
 
+
+  ///////////// DELETE ME /////////////////////////////////
+  printf("Iterative Conditioning and GBP\n");
+
+  //////////////////////////////////////////
+
+
   if (task==Task::MMAP || task==Task::MPE) { std::cout<<"Conditioning not supported for MPE/MMAP\n"; return 0; }
   if (doVerbose) std::cout<<"\n"<<"Beginning conditioned GBP...\n";
   if (order.size()==0) order=fg.order(mex::graphModel::OrderMethod::MinWidth);  // need an order if none yet...
@@ -532,8 +550,7 @@ int main(int argc, char* argv[])
     cond += fg.bestConditioner(order,cond);
     if (doVerbose) std::cout<<"\n";
     std::cout<<"Conditioning "<<cond<<"\n";
-    ibound = iboundInit;																// check all iBounds again (in case higher available)
-
+    ibound = iboundInit;		// check all iBounds again (in case higher available)
     bool doneCGBP=false;
     while (!doneCGBP) {
       bool useMBE=false;
@@ -672,15 +689,21 @@ double solveMBE(const graphModel& gm, const mex::VarOrder& order) {
 
 
 bool tryExactPR(const graphModel& gm, const mex::VarOrder& order) {
+
+  ///////////////// DELTE ME ////////////////////////////
+  printf("tryExactPR:\n");
+
+  ////////////////////////
   try {
     double mbCutoff = MemLimit/sizeof(double)*1024*1024;     // translate memory into MBE cutoff
     bool isExact = true;
     mex::mbe mb(gm.factors());
-
-    ////////////////DELETE ME////////////////////
+    
+////////////////DELETE ME////////////////////
+    //order[0] = 0; order[1] = 1;
     printf("MBE Factors\n");
-    printFactors(mb._gmo.factors());
-
+    //    printFactors(mb._gmo.factors());
+    printf("\nOrder: %u %u\n", order[0],order[1]);
     /////////////////////////////////////
     
 
@@ -704,6 +727,9 @@ bool tryExactPR(const graphModel& gm, const mex::VarOrder& order) {
 
 
 bool gbpPopulateCliques(mex::gbp& _gbp, const mex::VarOrder& order, size_t& ibound, VarSet* cond) {
+  ///////////////////// DELETE ME ////////////////////
+  printf("gbpPopulateCliques\n");
+  ///////////////////////////////////////
   bool isExact = false;
   double mbCutoff = MemLimit/sizeof(double)*1024*1024;     // translate memory into MBE cutoff
   _gbp.clearRegions();
