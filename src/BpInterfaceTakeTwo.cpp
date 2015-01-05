@@ -7,6 +7,8 @@
  */
 
 #include "BpInterfaceTakeTwo.h"
+#include "mbe.h"
+#include <cstring>
 #include <cstdio>
 #include <iostream>
 #include <fstream>
@@ -22,89 +24,177 @@ using namespace lgbp;
 opts: given options to use; any non specified options should have value -1/NULL
 */
 bool BpInterface::initialize(algOptions opts, bool useDefault, double totalTime){
+  
   bool result;
   options = algOptions();
   // TOOD:: init options
   // TODO:: make sure the files can be opened
   // Check problem file
-  ifstream is; is.open(opts.problemFile.c_str());
-  if (!is.is_open()) throw std::runtime_error("Failed to open problem file");
-  is.close();
-  // TODO:: make sure all of the necessary things are given (task, filename, ...)
-  
-  // TODO:: need lpbTime and such with totalTime?
-  
-  // initialize variables
-  std::cout<<"\n";
-  if(useDefault && totalTime > 0)
-    result = initializeDefault(totalTime);
-  else if(useDefault){
+  ifstream is; is.open(opts.problemFile);
+  if (!is.is_open()) {
     if(options.doVerbose)
-      printf("Failed Initialization:invalid total time given ");
+      std::cout<<"Failed to open problem file"<<std::endl;
     return false;
-    
-    return result;
   }
-}
-  
-  // Initialize the computation using command line arguments
-bool BpInterface::initialize(int argc,char** argv )  {
-  options = algOptions();
-    bool result;
-    result = parseCommandOptions(argc, argv);
-    
-    
-  }
-  
-// Initialize using default parameters
-  bool BpInterface::initializeDefault(double totalTime){
-
-   /*** UAI COMPETITION DEFAULTS BY TASK / RESOURCES **********************************/
-  const char *inftime = ::getenv("INF_TIME");
-  const char *infmem  = ::getenv("INF_MEMORY");
-  if (infmem!=NULL && inftime!=NULL) {
-    std::cout<<"Using default settings given UAI14 environment variables\n";
-    if (options.MemLimit == -1 && infmem!=NULL) options.MemLimit = atof(infmem)*1000-100;
-    mex::randSeed( 1234 );
-    if (inftime!=NULL) totalAvailableTime = atof(inftime);
-    if (totalAvailableTime < 60.0) {								
-	// Small time limit
-      options.lbpTime = 1.5; options.lbpErr = 1e-4; 
-      options.nOrders = 100; options.timeOrder = 1.5; options.nExtra = 2;
-      options.gbpTime = 300; options.gbpObj = 1e-2; options.gbpIter = -1; dt = 0.5;
-      options.iboundInit = 30; options.MemLimit = std::min(options.MemLimit, 300.0);
-      options.doCond = 1;
-    }	else if (totalAvailableTime < 1800) {					// Moderate time limit
-      options.lbpTime = 10; options.lbpErr = 1e-4; 
-      options.nOrders = 1000; options.timeOrder = 60; options.nExtra = 3;
-      options.gbpTime = 1000; options.gbpObj = 1e-2; options.gbpIter = -1; dt = 30;
-      options.iboundInit = 30;
-      options.doCond = 1;
-    } else {																// Large time limit
-      options.lbpTime = 15; options.lbpErr = 1e-4; 
-      options.nOrders = 1000; options.timeOrder = 100; options.nExtra = 3;
-      options.gbpTime = 1000; options.gbpObj = 1e-2; options.gbpIter = -1; dt = 30;
-      options.iboundInit = 30; 
-      options.doCond = 1;
-    }
-    if (task==Task::PR) options.gbpIter=1;
-    if (task==Task::MAR) options.gbpIter=2;
+  is.close();
+  if(options.task != Task::PR && options.task != Task::MAR){
+    if(options.doVerbose)
+      std::cout<<"Missing task"<<std::endl;
+    return false;
   }
 
-  std::cout<<"Memory limit set to "<<options.MemLimit<<"mb\n";
+// set up factors
+  facts = readUaiFile();
+  // read evidence
+  if(options.evidenceFile != NULL)
+    if(!readEvidenceFile())
+      return false;
+  
+ 
+  // Check all option variables
+  // Initializes with a moderate time limit
+  options.lbpTime <= 0 ?  10 : options.lbpTime; 
+  options.lbpErr <= 0 ?  1e-4: options.lbpErr; 
+  options.lbpIter <= 0 ? 2000 : options.lbpIter;
+  options.nOrders <= 0?  1000 : options.nOrders; 
+  options.timeOrder <= 0 ?  60: options.timeOrder; 
+  options.nExtra <= 0 ?  3: options.nExtra;
+  options.gbpTime <= 0 ?  1000: options.gbpTime; 
+  options.gbpObj <= 0 ?  1e-2: options.gbpObj; 
+  options.gbpIter <= 0 ?  -1: options.gbpIter;
+  dt <= 0 ?  30: dt;
+  options.iboundInit <= 0 ?  30: options.iboundInit;
+  options.doCond <= 0 ?  1: options.doCond; 
+  options.MemLimit <=0 ? 2*1024.0 : options.MemLimit;
+
+ // set up data structures
+  isExact = false;
+  phase = Phase::LBP;
+  logZ = 0;
+  bel = mex::vector<Factor>();
+ 
+  
   return true;
 }
 
+  
+// Initialize the computation using command line arguments
+bool BpInterface::initialize(int argc,char** argv )  {
+  options = algOptions();
+  bool result;
+  result = parseCommandOptions(argc, argv);
+// set up factors
+  facts = readUaiFile();
+  // read evidence
+  if(options.evidenceFile != NULL)
+    if(!readEvidenceFile())
+      return false;
+
+ // set up data structures
+  isExact = false;
+  phase = Phase::LBP;
+  logZ = 0;
+  bel = mex::vector<Factor>();
+ 
+
+  return result;
+    
+}
+  
+// Initialize using default parameters
+bool BpInterface::initialize(double totalTime, char* task, char* problemFile, char* orderFile, char* evidenceFile, bool verbose){
+  options = algOptions();
+  if ( problemFile == NULL) {
+    if(verbose)
+      std::cout<< "Missing problem file" << std::endl;
+    return false;
+  }
+  // Check problem file
+  ifstream is; is.open(problemFile);
+  if (!is.is_open()) {
+    if(options.doVerbose)
+      std::cout<<"Failed to open problem file"<<std::endl;
+    return false;
+  }
+  is.close();
+  if (strcmp(task, "PR") != 0 && strcmp(task, "MAR") !=0){
+    if(verbose) std::cout<< "Missing task\n";
+    return false;
+  }
+  options.doVerbose = verbose;
+  options.problemFile = problemFile;
+  options.orderFile = orderFile;
+  options.evidenceFile = evidenceFile;
+  options.task = Task(task);
+
+  // set up factors
+  facts = readUaiFile();
+  // read evidence
+  if(evidenceFile != NULL)
+    if(!readEvidenceFile())
+      return false;
+
+
+  if (options.MemLimit <= 0) 
+    options.MemLimit = 2048.0;
+  mex::randSeed( 1234 );
+  if (totalTime <= 0) 
+    totalAvailableTime = 30;
+  if (totalAvailableTime < 60.0) {								
+    // Small time limit
+    options.lbpTime = 1.5;  options.lbpErr =  1e-4 ; 
+    options.nOrders = 100; options.timeOrder = 1.5; options.nExtra = 2;
+    options.gbpTime = 300; options.gbpObj = 1e-2; options.gbpIter = -1; dt = 0.5;
+    options.iboundInit = 30; options.MemLimit = std::min(options.MemLimit, 300.0);
+    options.doCond = 1;options.ijgp = false;
+  }	else if (totalAvailableTime < 1800) {					// Moderate time limit
+    options.lbpTime = 10; options.lbpErr = 1e-4; 
+    options.nOrders = 1000; options.timeOrder = 60; options.nExtra = 3;
+    options.gbpTime = 1000; options.gbpObj = 1e-2; options.gbpIter = -1; dt = 30;
+    options.iboundInit = 30;
+    options.doCond = 1; options.ijgp = true;
+  } else {																// Large time limit
+    options.lbpTime = 15; options.lbpErr = 1e-4; 
+    options.nOrders = 1000; options.timeOrder = 100; options.nExtra = 3;
+    options.gbpTime = 1000; options.gbpObj = 1e-2; options.gbpIter = -1; dt = 30;
+    options.iboundInit = 30; 
+    options.doCond = 1; options.ijgp = true;
+  }
+  if (options.task==Task::PR) options.gbpIter=1;
+  if (options.task==Task::MAR) options.gbpIter=2;
+  
+
+  if(options.doVerbose) std::cout<<"Memory limit set to "<<options.MemLimit<<"mb\n";
+
+  // set up data structures
+  isExact = false;
+  phase = Phase::LBP;
+  logZ = 0;
+  bel = mex::vector<Factor>();
+ 
+  
+  return true;
+}
+
+
 // 
-  bool BpInterface::estimateComplexity(int &timeComplexity, int &memComplexity){
+bool BpInterface::estimateComplexity(int &timeComplexity, int &memComplexity){
   return true;
 }
 
 /*
-  Runs inference for the alloted time
- */
-bool BpInterface::runInference(int timeLimit)
+  Runs inference for the allotted time
+*/
+bool BpInterface::runInference()
 {
+
+  doLoopyBP();
+  printf("logZ : %g\n", logZ);
+  doGeneralBP();
+  printf("logZ : %g\n", logZ);
+  doIterativeConditioning();
+  printf("logZ : %g\n", logZ);
+  // TODO:: put in timing 
   if (!options.doCond) {
     std::cout<<"Quitting after GBP\n";
     return true;
@@ -116,9 +206,9 @@ bool BpInterface::runInference(int timeLimit)
 
   Puts the solution in the given argument
   returns true if the solution is successfully given
- */
- bool BpInterface::getSolution(mex::vector<Factor> &MAR){
-   if(task == Task::PR){
+*/
+bool BpInterface::getSolution(mex::vector<Factor> &MAR){
+  if(task == Task::PR){
     if(options.doVerbose)
       printf("Failed to get solution -- wrong task");
     return false;
@@ -126,7 +216,7 @@ bool BpInterface::runInference(int timeLimit)
   if(MAR.size() != bel.size()){
     if(options.doVerbose)
       printf("Failed to get solution -- MAR input param wrong size");
-	return false;
+    return false;
   }
 
   mex::vector<Factor>::iterator MARiter;
@@ -160,8 +250,8 @@ bool BpInterface::runInference(int timeLimit)
 
   Puts the solution in the given argument
   returns true if the solution is successfully given
- */
- bool BpInterface::getSolution(double  &PR)
+*/
+bool BpInterface::getSolution(double  &PR)
 {
   if(task == Task::MAR){
     if(options.doVerbose)
@@ -175,14 +265,14 @@ bool BpInterface::runInference(int timeLimit)
 
 /*
   Prints out the factors given in flist
- */
+*/
 void BpInterface::printFactors(mex::vector<Factor> flist){
   for (size_t f=0;f<flist.size();++f)  {        
-    printf("flist[%d]: nvar(%d), numStates(%d)\n", f, flist[f].nvar(), flist[f].nrStates());
-    printf("flist[%d]: values:", f) ;
+    std::cout << "flist[" <<f<< "]: nvar(" <<flist[f].nvar() << "), numStates("<<  flist[f].nrStates()<< ")"<<std::endl;
+    std::cout <<"flist[" << f << "]: values:" ;
     const double *values = flist[f].table();
     for (int v = 0; v < flist[f].nrStates(); v++){
-      printf("%f  ", values[f]);
+      std::cout<<values[f] << " ";
     }
     printf("\n");
     
@@ -195,7 +285,7 @@ void BpInterface::printFactors(mex::vector<Factor> flist){
 //
 
 // Parses a command line to initialize options
- bool BpInterface::parseCommandOptions(int argc, char** argv){
+bool BpInterface::parseCommandOptions(int argc, char** argv){
 
   po::options_description desc("Available options");
   desc.add_options()
@@ -234,7 +324,7 @@ void BpInterface::printFactors(mex::vector<Factor> flist){
   po::store(po::parse_command_line(argc,argv,desc),vm);
   //  po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm); 
   po::notify(vm);
-  std::string taskName;
+  const  char* taskName;
   /*** ARGUMENT CHECKING *************************************************************/
   if (vm.count("help")) { std::cout<<desc<<"\n"; return false; }
   if (vm.count("verbose")) options.doVerbose=true; else options.doVerbose=false;
@@ -247,21 +337,21 @@ void BpInterface::printFactors(mex::vector<Factor> flist){
 } 
 
 
- /*
-   reads in an evidence file
-  */
+/*
+  reads in an evidence file
+*/
 bool BpInterface::readEvidenceFile(){
   /*** READ IN EVIDENCE FILE *********************************************************/
   ifstream is2;
-  is2.open(options.evidenceFile.c_str());
+  is2.open(options.evidenceFile);
   if (is2.is_open()) {
-    std::cout<<"Got evidence file "<<options.evidenceFile.c_str()<<"\n";
+    std::cout<<"Got evidence file "<<options.evidenceFile<<"\n";
     std::map<uint32_t,size_t> evid;
     int nEvidVar; is2 >> nEvidVar;
     for (size_t i=0;i<nEvidVar;i++) {
       uint32_t vid; size_t vval; is2>>vid>>vval; 
       evid[vid]=vval; evVar |= Var(vid,0);
-      xhat[vid]=vval;
+      //xhat[vid]=vval;
       
       std::cout<<"Evidence on variables "<<evVar<<"\n";
       for (size_t f=0;f<facts.size();f++) {
@@ -280,18 +370,18 @@ bool BpInterface::readEvidenceFile(){
   } else std::cout<<"Evidence file not specified or not found\n";
   
   
- }
+}
 
 /*
-Reads in a uai file
-returns the factors read
+  Reads in a uai file
+  returns the factors read
 */
 
- mex::vector<Factor> BpInterface::readUaiFile(char* probName)
- {
+mex::vector<Factor> BpInterface::readUaiFile()
+{
   /*** READ IN PROBLEM FILE **********************************************************/
-  std::cout<<"Reading model file: "<<probName<<"\n";
-  ifstream is; is.open(probName);
+  std::cout<<"Reading model file: "<<options.problemFile<<"\n";
+  ifstream is; is.open(options.problemFile);
   mex::vector<Factor> flist = Factor::readUai10(is);
   size_t nvar=0;
   for (size_t f=0;f<flist.size();++f)  {                      // find maximum variable label
@@ -306,17 +396,19 @@ returns the factors read
   printf("\n\n");
   /////////////////////////////////
   bel.resize(nvar);
-  xhat.resize(nvar);
- }
-double  computeVariableOrder(int numTries, double timeLimit){
+  
+}
+double  BpInterface::computeVariableOrder(int numTries, double timeLimit){
   // start with a random order in case the model is very dense
+  double memUseRandom;
   if(totalAvailableTime < 60.0) memUseRandom = std::exp(28);
   else if (totalAvailableTime < 1800.0)  memUseRandom=std::exp(30);
   else memUseRandom=std::exp(40);
 
-  double score = fg.order( mex::graphModel::OrderMethod::Random, order, 0, memUseRandom );
+  
+  double score = factGraph.order( mex::graphModel::OrderMethod::Random, order, 0, memUseRandom );
   if (options.MemLimit > 0) {
-    const char *orderFile = NULL;				// Check for pre-specified elimination order file
+    //    const char *orderFile = NULL;				// Check for pre-specified elimination order file
     ifstream orderIStream; if (options.orderFile!=NULL) orderIStream.open(options.orderFile);
     if (orderIStream.is_open()) { 
       // If we were given an input file with an elimination ordering, just use that
@@ -330,16 +422,16 @@ double  computeVariableOrder(int numTries, double timeLimit){
       double startOrder = timeSystem();
       size_t iOrder = 0;			
       // Try to build new orders until time or count limit reached ////////////////////
-      while (iOrder < nOrders && (timeSystem()-startOrder < timeOrder)) {
-	score = fg.order(mex::graphModel::OrderMethod::WtMinFill, order, options.nExtra, score);
-	fg.order
+      while (iOrder < options.nOrders && (timeSystem()-startOrder < options.timeOrder)) {
+	score = factGraph.order(mex::graphModel::OrderMethod::WtMinFill, order, options.nExtra, score);
 	++iOrder;
       }
-      if (score < memUseRandom) InducedWidth = factGraph.inducedWidth(order);
+      double InducedWidth;
+      if (score < memUseRandom)  InducedWidth = factGraph.inducedWidth(order);
       std::cout<<"Best order of "<<iOrder<<" has induced width "<<InducedWidth<<", score "<<score<<"\n";
 
       // If we were given an ordering file name but no file, write our order out 
-      ofstream orderOStream; if (orderFile!=NULL) orderOStream.open(orderFile);
+      ofstream orderOStream; if (options.orderFile!=NULL) orderOStream.open(options.orderFile);
       if (orderOStream.is_open()) {
 	std::cout << "Writing elimination order to "<<options.orderFile<<"\n";
 	orderOStream<<order.size(); 
@@ -352,7 +444,7 @@ double  computeVariableOrder(int numTries, double timeLimit){
 } 
 
 // Does Loopy BP on factGraph
-bool BpInterface::doLoopyBP(){
+bool BpInterface::doLoopyBP() {
   /*** LOOPY BELIEF PROPAGATION ******************************************************/
   ///////////////////// DELETE ME ////////////////////////
   printf("Beginning Loopy BP\n");
@@ -362,50 +454,54 @@ bool BpInterface::doLoopyBP(){
   mex::graphModel fg(flist);
 
   mex::lbp _lbp(flist); 
-  std::cout<<"Model has "<<nvar<<" variables, "<<_lbp.nFactors()<<" factors\n";
-  if (lbpIter != 0 && lbpTime > 0) {
+  std::cout<<"Model has "<<nvar<<" variables, "<<_lbp.nFactors()<<" factors"<<std::endl;
+  if (options.lbpIter != 0 && options.lbpTime > 0) {
     _lbp.setProperties("Schedule=Priority,Distance=L1");
-    _lbp.setStopIter(lbpIter); 
-    _lbp.setStopMsg(lbpErr);
-    _lbp.setStopObj(lbpObj);
-    _lbp.setStopTime(lbpTime);
+    _lbp.setStopIter(options.lbpIter); 
+    _lbp.setStopMsg(options.lbpErr);
+    _lbp.setStopObj(options.lbpObj);
+    _lbp.setStopTime(options.lbpTime);
     _lbp.init();
     
-      _lbp.run();
-      switch (task) {
-      case Task::PR: logZ = _lbp.logZ()/c_log10); break;
-      case Task::MAR: {
-        for (size_t v=0;v<nvar;++v) 
-	  if (!evVar.contains(Var(v,0))) 
-	    bel[v]=_lbp.belief( _lbp.localFactor(v) );
-      } break;
-      }
+    _lbp.run();
+    switch (task) {
+    case Task::PR:
+      logZ = _lbp.logZ() / c_log10; 
+      break;
+    case Task::MAR: {
+      for (size_t v=0;v<nvar;++v) 
+	if (!evVar.contains(Var(v,0))) 
+	  bel[v]=_lbp.belief( _lbp.localFactor(v) );
+    } break;
+    }
+  
+    std::cout<<"LBP "<<logZ<<std::endl;
 
-  std::cout<<"LBP "<<_lbp.logZ()/ln10<<"\n";
+    _lbp.reparameterize();                                         // Convert loopy bp results to model
+    fg=graphModel(_lbp.factors());
+    /////////////////////// DELETE ME ///////////////////////////
+    printf("Loopy BP factors after reparameterization \n");
+    //printFactors(_lbp.factors());
+    printf("FG Factors\n");
+    // printFactors(fg.factors());
+    //////////////////////
 
-  _lbp.reparameterize();                                         // Convert loopy bp results to model
-  factgraph=graphModel(_lbp.factors());
-  /////////////////////// DELETE ME ///////////////////////////
-  printf("Loopy BP factors after reparameterization \n");
-  //printFactors(_lbp.factors());
-  printf("FG Factors\n");
-  // printFactors(fg.factors());
-  //////////////////////
-
+  }
 }
 
 
 
 // Does General BP on factGraph
-bool doGeneralBP(){
+bool BpInterface::doGeneralBP() {
+  size_t  ibound = options.iboundInit;
   computeVariableOrder(options.nOrders, options.timeOrder);
   // Try an exact solver and quit if it fits in memory
-  if (options.task==Task::PR && tryExactPR(factgraph,order)){
+  if (options.task==Task::PR && tryExactPR(factGraph,order)){
     isExact = true;
     return true;   // TODO: Need to debug without this...
   }
 
-  _gbp = mex::gbp(factGraph.factors());                      // Create a GBP object for later use
+  mex::gbp _gbp = mex::gbp(factGraph.factors());                      // Create a GBP object for later use
   if (options.ijgp) _gbp.setMinimal(true);      // use "ijgp-like" regions? (true = remove all with c=0)
   else              _gbp.setMinimal(false);
 
@@ -425,21 +521,16 @@ bool doGeneralBP(){
       std::cout<<"GBP with "<<_gbp.nRegions()<<" regions; mem "<<_gbp.memory()<<"M\n";
       _gbp.setProperties("Schedule=Fixed");
       _gbp.init();
-      _gbp.setStopIter(gbpIter); _gbp.setStopObj(gbpObj); _gbp.setStopMsg(-1.0); 
+      _gbp.setStopIter(options.gbpIter); _gbp.setStopObj(options.gbpObj); _gbp.setStopMsg(-1.0); 
       _gbp.setVerbose(options.doVerbose);
       if (isExact) _gbp.setDamping(-1.0);  // no damping if we think it's exact
-      if (task==Task::MMAP) { 
-	_gbp.setDamping(-1.0);  // no damping for hacky proximal mmap or mpe
-	_gbp.setStopObj(-1.0); gbpObj=-1.0;  // also, no objective stopping (since proximal will update)
-      }
-
       // Get region indices for single-variable beliefs
       mex::vector<mex::gbp::findex> regions(nvar);
       for (size_t v=0;v<nvar;++v) {
 	if (!evVar.contains(Var(v,0))) regions[v]=_gbp.regionWith(Var(v,0));
       }
 
-      double gbpLeft, gbpStop = timeSystem()+gbpTime;
+      double gbpLeft, gbpStop = timeSystem()+options.gbpTime;
       while ( (gbpLeft = gbpStop - timeSystem()) > 0 ) {
 	_gbp.setStopTime( std::min( dt , gbpLeft ) );
 	_gbp.run();
@@ -452,15 +543,15 @@ bool doGeneralBP(){
 	      bel[v]=_gbp.computeRegionBelief(regions[v]).marginal(Var(v,0));
 	} break;
 	}
-	std::cout<<"GBP "<<_gbp.logZ()/ln10<<"\n";
-	if (_gbp.dObj() < gbpObj) { std::cout<<"Reached objective tolerance\n"; break; }
-	if (_gbp.iter() >= gbpIter && gbpIter > 0) { std::cout<<"Reached iteration limit\n"; break; }
+	std::cout<<"GBP "<<_gbp.logZ()/c_log10<<"\n";
+	if (_gbp.dObj() < options.gbpObj) { std::cout<<"Reached objective tolerance\n"; break; }
+	if (_gbp.iter() >= options.gbpIter && options.gbpIter > 0) { std::cout<<"Reached iteration limit\n"; break; }
 	if (_gbp.logZ() == -mex::infty()) { std::cout<<"Model deemed inconsistent\n"; break; }
 		
       }
       doneGBP = true;
 
-      if (isExact && _gbp.dObj()<gbpObj) { //InducedWidth <= ibound)
+      if (isExact && _gbp.dObj()<options.gbpObj) { //InducedWidth <= ibound)
 	std::cout<<"Answer should be exact\n";
 	return 0;
       }
@@ -478,8 +569,7 @@ bool doGeneralBP(){
 
 
 
-}
-bool doIterativeConditioning(){
+bool BpInterface::doIterativeConditioning(){
   /*** ITERATIVE CONDITIONING AND GBP *************************************/
   // More general way to do this: condition-min (=0), condition-max (=inf)   (# states?)
   // flag to decide whether to discard if non-convergent (?) (see this vs cgbp) (or ok with damping?)
@@ -493,13 +583,13 @@ bool doIterativeConditioning(){
 
   //////////////////////////////////////////
   bool exact = false;
-  size_t ibound = iboundInit, InducedWidth=10000;
+  size_t ibound = options.iboundInit, InducedWidth=10000;
 
 
   if (options.doVerbose) std::cout<<"\n"<<"Beginning conditioned GBP...\n";
   if (order.size()==0) order=factGraph.order(mex::graphModel::OrderMethod::MinWidth);  // need an order if none yet...
  
-  _gbp = mex::gbp( mex::vector<Factor>() );  // !!! blank out GBP object; restore memory
+  // mex::gbp _gbp = mex::gbp( mex::vector<Factor>() );  // !!! blank out GBP object; restore memory
   VarSet cond;
 
   //!!! TODO: if options.doCond > 1, we should immediately populate with that many states
@@ -509,11 +599,11 @@ bool doIterativeConditioning(){
     cond += factGraph.bestConditioner(order,cond);
     if (options.doVerbose) std::cout<<"\n";
     std::cout<<"Conditioning "<<cond<<"\n";
-    ibound = iboundInit;		// check all iBounds again (in case higher available)
+    ibound = options.iboundInit;		// check all iBounds again (in case higher available)
     bool doneCGBP=false;
     while (!doneCGBP) {
       bool useMBE=false;
-      if (task == Task::PR && fitsMBE(fg,order,&cond)) {
+      if (task == Task::PR && fitsMBE(factGraph,order,&cond)) {
         std::cout<<"Trying exact via MBE\n";
         useMBE=true; isExact=true;
       }
@@ -524,7 +614,7 @@ bool doIterativeConditioning(){
      	mex::vector<mex::gbp::findex> regions(nvar);			// !!! dangerous; pull out & match to prev (clear+resize)
     	for (size_t i=0;i<lnZ.nrStates();++i) {
 	  std::map<Var,size_t> val;  ind2sub(cond,i,val);
-	  mex::vector<Factor> fcond = fg.factors();
+	  mex::vector<Factor> fcond = factGraph.factors();
 	  for (size_t f=0;f<fcond.size();++f) {
 	    VarSet isect = cond & fcond[f].vars();
 	    if (isect.size() > 0) fcond[f] = fcond[f].condition(isect, sub2ind(isect,val));
@@ -541,7 +631,7 @@ bool doIterativeConditioning(){
 	  }
 
 	  mex::lbp fgcond(fcond); fgcond.setProperties("Schedule=Priority,Distance=L1");
-	  fgcond.setStopIter(lbpIter); fgcond.setStopMsg(lbpErr); fgcond.setStopObj(lbpObj);
+	  fgcond.setStopIter(options.lbpIter); fgcond.setStopMsg(options.lbpErr); fgcond.setStopObj(options.lbpObj);
 	  fgcond.setStopTime(0.5);
 	  fgcond.init();
 	  fgcond.run();
@@ -550,11 +640,11 @@ bool doIterativeConditioning(){
 
 	  // TODO:DEBUG: it seems that reinitializing gbp is not equivalent to re-constructing a new one.. FIX
 	  mex::gbp _gbp(fcond);
-	  if (vm.count("ijgp")) _gbp.setMinimal(true); else _gbp.setMinimal(false);  // use "ijgp-like" regions?
+	  if (options.ijgp) _gbp.setMinimal(true); else _gbp.setMinimal(false);  // use "ijgp-like" regions?
 	  isExact = gbpPopulateCliques(_gbp,order,ibound,&cond);
 	  _gbp.setProperties("Schedule=Fixed");
-	  _gbp.setStopIter(gbpIter); _gbp.setStopObj(gbpObj); _gbp.setStopMsg(-1.0);
-	  _gbp.setStopTime(gbpTime); _gbp.setVerbose(options.doVerbose);
+	  _gbp.setStopIter(options.gbpIter); _gbp.setStopObj(options.gbpObj); _gbp.setStopMsg(-1.0);
+	  _gbp.setStopTime(options.gbpTime); _gbp.setVerbose(options.doVerbose);
 	  _gbp.init();
 
 	  if (task==Task::MAR) {		// TODO: change to loop over "inferred" variable list...
@@ -601,7 +691,7 @@ bool doIterativeConditioning(){
 	  }
 	  break;
     	}
-    	std::cout<<"Conditioning "<<cond<<" => "<<lnZtot<<" ("<<lnZtot/ln10<<")\n";
+    	std::cout<<"Conditioning "<<cond<<" => "<<lnZtot<<" ("<<lnZtot/c_log10<<")\n";
 
       } catch (std::exception& e) {
       	doneCGBP=false; options.MemLimit*=.9; ibound--;
@@ -623,7 +713,7 @@ bool doIterativeConditioning(){
 // Helper Functions 
 //////////////////////////////
 
-bool fitsMBE(const graphModel& gm, const mex::VarOrder& order, const VarSet* cond) {
+bool BpInterface::fitsMBE(const graphModel& gm, const mex::VarOrder& order, const VarSet* cond) {
   double mbCutoff = options.MemLimit/sizeof(double)*1024*1024;     // translate memory into MBE cutoff
   bool isExact = true;
   mex::mbe mb(gm.factors());
@@ -659,11 +749,11 @@ bool BpInterface::tryExactPR(const graphModel& gm, const mex::VarOrder& order) {
     bool isExact = true;
     mex::mbe mb(gm.factors());
     
-////////////////DELETE ME////////////////////
+    ////////////////DELETE ME////////////////////
     //order[0] = 0; order[1] = 1;
     printf("MBE Factors\n");
     //    printFactors(mb._gmo.factors());
-    printf("\nOrder: %u %u\n", order[0],order[1]);
+    std::cout << "Order: "<< order[0] << " " <<order[1]<< std::endl;
     /////////////////////////////////////
     
     mb.setOrder(order);
@@ -672,8 +762,8 @@ bool BpInterface::tryExactPR(const graphModel& gm, const mex::VarOrder& order) {
     if (mbMem < mbCutoff && isExact) {
       std::cout<<"Attempting exact solve; mbMem="<<mbMem<<" vs "<<mbCutoff<<" ("<<options.MemLimit<<")\n";
       mb.init();
-      writePR(outfile,mb.logZ());
-      std::cout<<"Exact solution by MBE: "<<mb.logZ()/std::log(10)<<"\n";
+      logZ = mb.logZ()/c_log10;
+      std::cout<<"Exact solution by MBE: "<<logZ<<"\n";
       return true;
     }
   } catch (std::exception& e) {
@@ -710,7 +800,7 @@ bool BpInterface::gbpPopulateCliques(mex::gbp& _gbp, const mex::VarOrder& order,
   //ofstream ofs("cliques.mbe.txt");
   //for (size_t c=0;c<cliques.size();++c) ofs<<cliques[c]<<"\n"; std::cout<<"\n";  // output for DEBUG !!!
   //ofs.close();
-  std::cout<<"MBE iBound "<<ibound<<" = "<<mem<<"M\n";
+  std::cout<<"MBE iBound "<<ibound<<" = "<<mem<<"M"<<std::endl;
   return isExact;
 }
 

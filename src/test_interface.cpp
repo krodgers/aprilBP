@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "BPinterface.h"
+#include "BpInterfaceTakeTwo.h"
 #include <fstream>
 #include <iostream>
 
@@ -18,7 +18,7 @@ int main(int argc, char** argv){
   // char** params = (char**) malloc(sizeof(char*) * 5);
   // params[0] = "linux/build/bp_interface"; 
   // params[1] = "-f";
-  // params[2] = "../data/test.uai";
+  // params[2] = ;
   // params[3] = "-T";
   // params[4] = "PR";
   // params[5] = "--verbose";
@@ -28,7 +28,12 @@ int main(int argc, char** argv){
   printf("Starting...\n");
   BpInterface bpi;
   printf("Initializing\n");
-  bool success = bpi.initialize(argc,argv);
+  char t[] = "PR";
+  char prob[] = {"../data/test.uai"};
+  char order[] = {"../data/eliminationOrder.uai"};
+  bool success = bpi.initialize(1800, t, prob, order, NULL, true);
+
+
  //free(params);
   if(!success){
     printf("Failed Initializing\n");
@@ -41,9 +46,10 @@ int main(int argc, char** argv){
   printf("Estimated %d time and %d memory\n", time, memory);
 
   printf("Beginning Inference\n");
-  bpi.runInference(120);
+  bpi.runInference();
   printf("Getting solution\n");
-  double ans =  bpi.getPRSolution();
+  double ans;
+  bpi.getSolution(ans);
   printf("Solution returned:%g \n",ans);
   std::cout<<ans<<"\n";
   printf("Quitting\n");

@@ -49,12 +49,13 @@ namespace lgbp {
       int    iboundInit; // initial ibound liimit
       double timeOrder; // max time to spend on variable ordering
       int    nOrders; // max number of variable orderings to try
-      std::string problemFile; // the name of the file to read the problem from
+      const char* problemFile; // the name of the file to read the problem from
       int task; // which task we're doing
-      std::string orderFile; // name of the file to read a variable ordering from
-      std::string evidenceFile; // name of the file to read evidence from
-      std::string query; // name of the file to read MMAP query from
+      const char*  orderFile; // name of the file to read a variable ordering from
+      const char* evidenceFile; // name of the file to read evidence from
+      // std::string query; // name of the file to read MMAP query from
       int  nExtra;
+      bool ijgp;
     } algOptions; 
 
   class BpInterface {
@@ -75,13 +76,14 @@ namespace lgbp {
    
     bool initialize(int argc, char** argv); // Initialize the computation. Returns true on success.
     bool initialize(algOptions opts, bool useDefault, double totalTime); // Initialize with given paramters; not all paramters are required
+    bool initialize(double totalTime, char* task, char* problemFile, char* orderFile, char* evidenceFile, bool verbose);
     
 
     bool estimateComplexity(int &timeComplexity, int &memComplexity);  // Does nothing right now  
     bool getSolution(double  &PR); // get the solution for PR
     bool getSolution(mex::vector<Factor> &MAR); // get solution for MAR
 
-    bool runInference(int timeLimit); // runs the inference algorithm for a small amount of time. Meant to be called repeatedly
+    bool runInference(); // runs the inference algorithm for a small amount of time. Meant to be called repeatedly
     void printFactors(mex::vector<mex::Factor> flist);
 
 
@@ -111,7 +113,6 @@ namespace lgbp {
     // Functions
     //
     
-    bool initializeDefault(double totalTime);
     bool doLoopyBP();    // Does Loopy BP on factGraph
     bool doGeneralBP();    // Does General BP on factGraph
     bool doIterativeConditioning();
