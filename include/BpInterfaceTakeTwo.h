@@ -84,7 +84,7 @@ namespace lgbp {
     bool getSolution(mex::vector<Factor> &MAR); // get solution for MAR
 
     bool runInference(); // runs the inference algorithm for a small amount of time. Meant to be called repeatedly
-    void printFactors(mex::vector<mex::Factor> flist);
+    void printFactors(mex::vector<mex::Factor> *flist);
 
 
   private:
@@ -95,15 +95,14 @@ namespace lgbp {
 
     int task; // which task we're doing
     int phase; // track if stop command has been sent   
-    mex::vector<Factor> bel; // stores results for MAR
-    mex::vector<Factor> facts; // stores the factors 
+    mex::vector<Factor>* bel; // stores results for MAR
+    mex::vector<Factor>* facts; // stores the factors 
     VarSet evVar; // evidence variables
     mex::VarOrder order; // the ordering of the variables
     size_t nvar;
     mex::graphModel factGraph; // the graph of the model
     double logZ; // result of PR
     double totalAvailableTime; // the amount of time available for inference
-    mex::vector<Factor> flist;
     bool isExact; // true when we've gotten an exact solution
     double dt;
 	
@@ -123,7 +122,7 @@ namespace lgbp {
     bool tryExactPR(const graphModel& gm, const mex::VarOrder& order);
     bool gbpPopulateCliques(mex::gbp& _gbp, const mex::VarOrder& order, size_t& ibound, VarSet* cond);
     bool readEvidenceFile();
-    mex::vector<Factor> readUaiFile();
+    bool readUaiFile();
 
   };
 

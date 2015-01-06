@@ -142,8 +142,14 @@ public:
     size_t n=0;  if (forder.size()) n = _iter % forder.size();
 
     for (; dMsg>=_stopMsg && _iter<_stopIter && std::abs(dObj)>=_stopObj; ) {
-      if (_stopTime > 0 && _stopTime <= (timeSystem()-startTime)) break;       // time-out check
+      if (_stopTime > 0 && _stopTime <= (timeSystem()-startTime)){
+	//////////DELETE ME ////////////////////
+	std::cout<<"starttime: " <<  startTime << std::endl;
+	std::cout<<"_stopTime > 0: " << (_stopTime > 0) << "\n _stopTime <= (timeSystem()-startTime): " <<  (_stopTime <= (timeSystem()-startTime)) << std::endl;
 
+	///////////////////////////////
+	break;       // time-out check
+      }
       size_t f;                                                   // factor index
       if (_sched==Schedule::Priority) {                           // priority schedule =>
         f=edge(priority.top().second).second;                     //   get next factor for update from queue
@@ -178,7 +184,9 @@ public:
         dObj -= _lnZ;
       }
 
-      if (timeSystem()>print) { print=timeSystem()+1; std::cout<<"iter "<<_iter/nFactors()<<"; lnZ: "<<_lnZ<<"\n"; }
+      //      if (timeSystem()>print) { 
+      print=timeSystem()+1; std::cout<<"iter "<<_iter/nFactors()<<"; lnZ: "<<_lnZ<<"\n";
+      //}
 
       _iter++;
     }

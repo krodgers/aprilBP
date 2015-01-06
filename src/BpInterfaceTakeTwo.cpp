@@ -44,7 +44,7 @@ bool BpInterface::initialize(algOptions opts, bool useDefault, double totalTime)
   }
 
 // set up factors
-  facts = readUaiFile();
+  if (!readUaiFile()) return false;
   // read evidence
   if(options.evidenceFile != NULL)
     if(!readEvidenceFile())
@@ -53,26 +53,26 @@ bool BpInterface::initialize(algOptions opts, bool useDefault, double totalTime)
  
   // Check all option variables
   // Initializes with a moderate time limit
-  options.lbpTime <= 0 ?  10 : options.lbpTime; 
-  options.lbpErr <= 0 ?  1e-4: options.lbpErr; 
-  options.lbpIter <= 0 ? 2000 : options.lbpIter;
-  options.nOrders <= 0?  1000 : options.nOrders; 
-  options.timeOrder <= 0 ?  60: options.timeOrder; 
-  options.nExtra <= 0 ?  3: options.nExtra;
-  options.gbpTime <= 0 ?  1000: options.gbpTime; 
-  options.gbpObj <= 0 ?  1e-2: options.gbpObj; 
-  options.gbpIter <= 0 ?  -1: options.gbpIter;
-  dt <= 0 ?  30: dt;
-  options.iboundInit <= 0 ?  30: options.iboundInit;
-  options.doCond <= 0 ?  1: options.doCond; 
-  options.MemLimit <=0 ? 2*1024.0 : options.MemLimit;
+  options.lbpTime == 0 ?  10 : options.lbpTime; 
+  options.lbpErr == 0 ?  1e-4: options.lbpErr; 
+  options.lbpIter == 0 ? 2000 : options.lbpIter;
+  options.lbpObj = 0? -1: options.lbpObj;
+  options.nOrders == 0?  1000 : options.nOrders; 
+  options.timeOrder == 0 ?  60: options.timeOrder; 
+  options.nExtra == 0 ?  3: options.nExtra;
+  options.gbpTime == 0 ?  1000: options.gbpTime; 
+  options.gbpObj == 0 ?  1e-2: options.gbpObj; 
+  options.gbpIter == 0 ?  -1: options.gbpIter;
+  dt == 0 ?  30: dt;
+  options.iboundInit == 0 ?  30: options.iboundInit;
+  options.doCond == 0 ?  1: options.doCond; 
+  options.MemLimit ==0 ? 2*1024.0 : options.MemLimit;
 
  // set up data structures
   isExact = false;
   phase = Phase::LBP;
   logZ = 0;
-  bel = mex::vector<Factor>();
- 
+  
   
   return true;
 }
@@ -84,7 +84,7 @@ bool BpInterface::initialize(int argc,char** argv )  {
   bool result;
   result = parseCommandOptions(argc, argv);
 // set up factors
-  facts = readUaiFile();
+  if (!readUaiFile()) return false;
   // read evidence
   if(options.evidenceFile != NULL)
     if(!readEvidenceFile())
@@ -94,8 +94,7 @@ bool BpInterface::initialize(int argc,char** argv )  {
   isExact = false;
   phase = Phase::LBP;
   logZ = 0;
-  bel = mex::vector<Factor>();
- 
+  
 
   return result;
     
@@ -117,10 +116,10 @@ bool BpInterface::initialize(double totalTime, char* task, char* problemFile, ch
     return false;
   }
   is.close();
-  if (strcmp(task, "PR") != 0 && strcmp(task, "MAR") !=0){
-    if(verbose) std::cout<< "Missing task\n";
-    return false;
-  }
+  // if (strcmp(task, "PR") != 0 && strcmp(task, "MAR") !=0){
+  //   if(verbose) std::cout<< "Missing task\n";
+  //   return false;
+  // }
   options.doVerbose = verbose;
   options.problemFile = problemFile;
   options.orderFile = orderFile;
@@ -128,7 +127,7 @@ bool BpInterface::initialize(double totalTime, char* task, char* problemFile, ch
   options.task = Task(task);
 
   // set up factors
-  facts = readUaiFile();
+  if (!readUaiFile()) return false;
   // read evidence
   if(evidenceFile != NULL)
     if(!readEvidenceFile())
@@ -142,19 +141,19 @@ bool BpInterface::initialize(double totalTime, char* task, char* problemFile, ch
     totalAvailableTime = 30;
   if (totalAvailableTime < 60.0) {								
     // Small time limit
-    options.lbpTime = 1.5;  options.lbpErr =  1e-4 ; 
+    options.lbpTime = 1.5;  options.lbpIter = 2000; options.lbpErr =  1e-4 ; 
     options.nOrders = 100; options.timeOrder = 1.5; options.nExtra = 2;
     options.gbpTime = 300; options.gbpObj = 1e-2; options.gbpIter = -1; dt = 0.5;
     options.iboundInit = 30; options.MemLimit = std::min(options.MemLimit, 300.0);
     options.doCond = 1;options.ijgp = false;
   }	else if (totalAvailableTime < 1800) {					// Moderate time limit
-    options.lbpTime = 10; options.lbpErr = 1e-4; 
+    options.lbpTime = 10; options.lbpErr = 1e-4; options.lbpIter = 2500;
     options.nOrders = 1000; options.timeOrder = 60; options.nExtra = 3;
     options.gbpTime = 1000; options.gbpObj = 1e-2; options.gbpIter = -1; dt = 30;
     options.iboundInit = 30;
     options.doCond = 1; options.ijgp = true;
   } else {																// Large time limit
-    options.lbpTime = 15; options.lbpErr = 1e-4; 
+    options.lbpTime = 15; options.lbpErr = 1e-4; options.lbpIter = 3000;
     options.nOrders = 1000; options.timeOrder = 100; options.nExtra = 3;
     options.gbpTime = 1000; options.gbpObj = 1e-2; options.gbpIter = -1; dt = 30;
     options.iboundInit = 30; 
@@ -162,7 +161,7 @@ bool BpInterface::initialize(double totalTime, char* task, char* problemFile, ch
   }
   if (options.task==Task::PR) options.gbpIter=1;
   if (options.task==Task::MAR) options.gbpIter=2;
-  
+  options.lbpObj = -1;
 
   if(options.doVerbose) std::cout<<"Memory limit set to "<<options.MemLimit<<"mb\n";
 
@@ -170,7 +169,6 @@ bool BpInterface::initialize(double totalTime, char* task, char* problemFile, ch
   isExact = false;
   phase = Phase::LBP;
   logZ = 0;
-  bel = mex::vector<Factor>();
  
   
   return true;
@@ -213,7 +211,7 @@ bool BpInterface::getSolution(mex::vector<Factor> &MAR){
       printf("Failed to get solution -- wrong task");
     return false;
   }
-  if(MAR.size() != bel.size()){
+  if(MAR.size() != bel->size()){
     if(options.doVerbose)
       printf("Failed to get solution -- MAR input param wrong size");
     return false;
@@ -237,7 +235,7 @@ bool BpInterface::getSolution(mex::vector<Factor> &MAR){
   // std::cout<<"Wrote MAR\n";
 
 
-  for(MARiter = MAR.begin(), belIter = bel.begin(); MARiter != MAR.end(); MARiter++, belIter++){
+  for(MARiter = MAR.begin(), belIter = bel->begin(); MARiter != MAR.end(); MARiter++, belIter++){
     *MARiter = *belIter;
   }
 
@@ -266,12 +264,12 @@ bool BpInterface::getSolution(double  &PR)
 /*
   Prints out the factors given in flist
 */
-void BpInterface::printFactors(mex::vector<Factor> flist){
-  for (size_t f=0;f<flist.size();++f)  {        
-    std::cout << "flist[" <<f<< "]: nvar(" <<flist[f].nvar() << "), numStates("<<  flist[f].nrStates()<< ")"<<std::endl;
-    std::cout <<"flist[" << f << "]: values:" ;
-    const double *values = flist[f].table();
-    for (int v = 0; v < flist[f].nrStates(); v++){
+void BpInterface::printFactors(mex::vector<Factor> *flist){
+  for (size_t f=0;f<flist->size();++f)  {        
+    std::cout << "(*flist)[" <<f<< "]: nvar(" <<(*flist)[f].nvar() << "), numStates("<<  (*flist)[f].nrStates()<< ")"<<std::endl;
+    std::cout <<"(*flist)[" << f << "]: values:" ;
+    const double *values = (*flist)[f].table();
+    for (int v = 0; v < (*flist)[f].nrStates(); v++){
       std::cout<<values[f] << " ";
     }
     printf("\n");
@@ -354,13 +352,13 @@ bool BpInterface::readEvidenceFile(){
       //xhat[vid]=vval;
       
       std::cout<<"Evidence on variables "<<evVar<<"\n";
-      for (size_t f=0;f<facts.size();f++) {
-        if (facts[f].vars().intersects(evVar)) {
-          VarSet overlap = facts[f].vars() & evVar;
+      for (size_t f=0;f<facts->size();f++) {
+        if ((*facts)[f].vars().intersects(evVar)) {
+          VarSet overlap = (*facts)[f].vars() & evVar;
           evVar += overlap;         // correct missing dimension information
           for (size_t v=0;v<overlap.nvar();++v) 
-            bel[overlap[v].label()]=Factor::delta(overlap[v],evid[overlap[v].label()]);
-          facts[f] = facts[f].condition( overlap, sub2ind(overlap,evid) );
+            (*bel)[overlap[v].label()]=Factor::delta(overlap[v],evid[overlap[v].label()]);
+          (*facts)[f] = (*facts)[f].condition( overlap, sub2ind(overlap,evid) );
 	  // !!! TODO:FIX: if no variables left, create delta functions with constant value?
         }
       }
@@ -373,29 +371,34 @@ bool BpInterface::readEvidenceFile(){
 }
 
 /*
-  Reads in a uai file
-  returns the factors read
+  Reads in a uai file to facts
+  returns true if successful
 */
 
-mex::vector<Factor> BpInterface::readUaiFile()
+bool BpInterface::readUaiFile()
 {
   /*** READ IN PROBLEM FILE **********************************************************/
   std::cout<<"Reading model file: "<<options.problemFile<<"\n";
   ifstream is; is.open(options.problemFile);
-  mex::vector<Factor> flist = Factor::readUai10(is);
-  size_t nvar=0;
-  for (size_t f=0;f<flist.size();++f)  {                      // find maximum variable label
-    if (flist[f].nvar() > 0){
-      nvar=std::max(nvar,(size_t)(flist[f].vars().rbegin()->label()+1));
+  if(!is.is_open())
+    return false;
+  
+  facts = new mex::vector<Factor>(Factor::readUai10(is));
+  if(facts == NULL) return false;
+  nvar=0;
+  for (size_t f=0;f<facts->size();++f)  {                      // find maximum variable label
+    if ((*facts)[f].nvar() > 0){
+      nvar=std::max(nvar,(size_t)((*facts)[f].vars().rbegin()->label()+1));
     }
   }
 
   /////////////// DELETE ME ////////////////
   printf("\nInitialized Factors: \n");
-  //  printFactors(flist);
+  printFactors(facts);
   printf("\n\n");
   /////////////////////////////////
-  bel.resize(nvar);
+  bel = new mex::vector<Factor>(nvar);
+  return true;
   
 }
 double  BpInterface::computeVariableOrder(int numTries, double timeLimit){
@@ -446,14 +449,9 @@ double  BpInterface::computeVariableOrder(int numTries, double timeLimit){
 // Does Loopy BP on factGraph
 bool BpInterface::doLoopyBP() {
   /*** LOOPY BELIEF PROPAGATION ******************************************************/
-  ///////////////////// DELETE ME ////////////////////////
-  printf("Beginning Loopy BP\n");
-  printf("BP factors:\n");
-  printFactors(flist);
-  //////////////////////////////////////////
-  mex::graphModel fg(flist);
+  mex::graphModel fg(*facts);
 
-  mex::lbp _lbp(flist); 
+  mex::lbp _lbp(*facts); 
   std::cout<<"Model has "<<nvar<<" variables, "<<_lbp.nFactors()<<" factors"<<std::endl;
   if (options.lbpIter != 0 && options.lbpTime > 0) {
     _lbp.setProperties("Schedule=Priority,Distance=L1");
@@ -462,6 +460,14 @@ bool BpInterface::doLoopyBP() {
     _lbp.setStopObj(options.lbpObj);
     _lbp.setStopTime(options.lbpTime);
     _lbp.init();
+  ///////////////////// DELETE ME ////////////////////////
+  printf("Beginning Loopy BP\n");
+  printf("BP factors:\n");
+  mex::vector<Factor> temp = _lbp.beliefs();
+  printFactors(&temp);
+  options.lbpTime = 5000;
+  options.lbpErr = -1;
+  //////////////////////////////////////////
     
     _lbp.run();
     switch (task) {
@@ -471,14 +477,14 @@ bool BpInterface::doLoopyBP() {
     case Task::MAR: {
       for (size_t v=0;v<nvar;++v) 
 	if (!evVar.contains(Var(v,0))) 
-	  bel[v]=_lbp.belief( _lbp.localFactor(v) );
+	  (*bel)[v]=_lbp.belief( _lbp.localFactor(v) );
     } break;
     }
   
     std::cout<<"LBP "<<logZ<<std::endl;
 
     _lbp.reparameterize();                                         // Convert loopy bp results to model
-    fg=graphModel(_lbp.factors());
+    factGraph=graphModel(_lbp.factors());
     /////////////////////// DELETE ME ///////////////////////////
     printf("Loopy BP factors after reparameterization \n");
     //printFactors(_lbp.factors());
@@ -537,10 +543,10 @@ bool BpInterface::doGeneralBP() {
 	switch (task) {
 	case Task::PR: logZ = _gbp.logZStable()/c_log10; break; 
 	case Task::MAR: {
-	  //for (size_t v=0;v<nvar;++v) if (!evVar.contains(Var(v,0))) bel[v]=_gbp.belief(Var(v,0));
+	  //for (size_t v=0;v<nvar;++v) if (!evVar.contains(Var(v,0))) bel->at(v)=_gbp.belief(Var(v,0));
 	  for (size_t v=0;v<nvar;++v) 
 	    if (!evVar.contains(Var(v,0))) 
-	      bel[v]=_gbp.computeRegionBelief(regions[v]).marginal(Var(v,0));
+	      bel->at(v) =_gbp.computeRegionBelief(regions[v]).marginal(Var(v,0));
 	} break;
 	}
 	std::cout<<"GBP "<<_gbp.logZ()/c_log10<<"\n";
@@ -663,7 +669,7 @@ bool BpInterface::doIterativeConditioning(){
 	  //TODO: never worry about this?  or, only worry if anytime enabled?
 	  lnZ[i] = _gbp.logZStable();
 	  if (task==Task::MAR) {
-	    condMarginals.push_back(bel);
+	    condMarginals.push_back(*bel);
 	    for (size_t v=0;v<nvar;++v)
 	      if (!evVar.contains(Var(v,0)) && !cond.contains(Var(v,0)))
             	condMarginals[i][v]=_gbp.computeRegionBelief(regions[v]).marginal(Var(v,0));
@@ -683,10 +689,10 @@ bool BpInterface::doIterativeConditioning(){
 	  Factor probs = (lnZ - lnZtot).exp();
 	  for (size_t v=0;v<nvar;++v) {
 	    if (evVar.contains(Var(v,0))) { } // evidence variables not updated
-	    else if (cond.contains(Var(v,0)))  { bel[v] = probs.marginal(Var(v,0)); }
+	    else if (cond.contains(Var(v,0)))  { bel->at(v) = probs.marginal(Var(v,0)); }
 	    else {		// TODO: change to incremental update?
-	      bel[v] = condMarginals[0][v] * probs[0];
-	      for (size_t i=1;i<lnZ.nrStates();++i) bel[v] += condMarginals[i][v] * probs[i];
+	      bel->at(v) = condMarginals[0][v] * probs[0];
+	      for (size_t i=1;i<lnZ.nrStates();++i) bel->at(v) += condMarginals[i][v] * probs[i];
 	    }
 	  }
 	  break;
