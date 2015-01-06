@@ -30,7 +30,7 @@ int main(int argc, char** argv){
   printf("Initializing\n");
   char t[] = "PR";
   char prob[] = {"../data/test.uai"};
-  char order[] = {"../data/eliminationOrder.uai"};
+  char order[] = {"../data/eliminationOrder"};
   bool success = bpi.initialize(1800, t, prob, order, NULL, true);
 
 

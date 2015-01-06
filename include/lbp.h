@@ -184,9 +184,9 @@ public:
         dObj -= _lnZ;
       }
 
-      //      if (timeSystem()>print) { 
-      print=timeSystem()+1; std::cout<<"iter "<<_iter/nFactors()<<"; lnZ: "<<_lnZ<<"\n";
-      //}
+      if (timeSystem()>print) { 
+	print=timeSystem()+1; std::cout<<"iter "<<_iter/nFactors()<<"; lnZ: "<<_lnZ<<"\n";
+      }
 
       _iter++;
     }

@@ -42,7 +42,7 @@ namespace lgbp {
 
     typedef struct {
       double MemLimit;
-      double lbpTime, lbpIter, lbpObj, lbpErr;
+      double lbpTime, lbpIter, lbpObj;
       double gbpTime, gbpIter, gbpObj;
       int    doCond;
       bool   doVerbose; // toggles printing to std::out

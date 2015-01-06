@@ -54,7 +54,6 @@ bool BpInterface::initialize(algOptions opts, bool useDefault, double totalTime)
   // Check all option variables
   // Initializes with a moderate time limit
   options.lbpTime == 0 ?  10 : options.lbpTime; 
-  options.lbpErr == 0 ?  1e-4: options.lbpErr; 
   options.lbpIter == 0 ? 2000 : options.lbpIter;
   options.lbpObj = 0? -1: options.lbpObj;
   options.nOrders == 0?  1000 : options.nOrders; 
@@ -141,19 +140,19 @@ bool BpInterface::initialize(double totalTime, char* task, char* problemFile, ch
     totalAvailableTime = 30;
   if (totalAvailableTime < 60.0) {								
     // Small time limit
-    options.lbpTime = 1.5;  options.lbpIter = 2000; options.lbpErr =  1e-4 ; 
+    options.lbpTime = 1.5;  options.lbpIter = 2000;  
     options.nOrders = 100; options.timeOrder = 1.5; options.nExtra = 2;
     options.gbpTime = 300; options.gbpObj = 1e-2; options.gbpIter = -1; dt = 0.5;
     options.iboundInit = 30; options.MemLimit = std::min(options.MemLimit, 300.0);
     options.doCond = 1;options.ijgp = false;
   }	else if (totalAvailableTime < 1800) {					// Moderate time limit
-    options.lbpTime = 10; options.lbpErr = 1e-4; options.lbpIter = 2500;
+    options.lbpTime = 10;  options.lbpIter = 2500;
     options.nOrders = 1000; options.timeOrder = 60; options.nExtra = 3;
     options.gbpTime = 1000; options.gbpObj = 1e-2; options.gbpIter = -1; dt = 30;
     options.iboundInit = 30;
     options.doCond = 1; options.ijgp = true;
   } else {																// Large time limit
-    options.lbpTime = 15; options.lbpErr = 1e-4; options.lbpIter = 3000;
+    options.lbpTime = 15;  options.lbpIter = 3000;
     options.nOrders = 1000; options.timeOrder = 100; options.nExtra = 3;
     options.gbpTime = 1000; options.gbpObj = 1e-2; options.gbpIter = -1; dt = 30;
     options.iboundInit = 30; 
@@ -301,7 +300,6 @@ bool BpInterface::parseCommandOptions(int argc, char** argv){
     ("memory,m", po::value<double>(&options.MemLimit)->default_value(2*1024.0),    "memory bound (MB)")
     ("lbps", po::value<double>(&options.lbpTime)->default_value(300),  "loopy belief propagation stop (seconds)")
     ("lbpi", po::value<double>(&options.lbpIter)->default_value(2000), "loopy belief propagation stop (iterations)")
-    ("lbpe", po::value<double>(&options.lbpErr )->default_value(-1),   "loopy belief propagation stop (msg error)")
     ("lbpo", po::value<double>(&options.lbpObj )->default_value(-1),   "loopy belief propagation stop (objective)")
     ("gbps", po::value<double>(&options.gbpTime)->default_value(300),  "gen belief propagation stop (seconds)")
     ("gbpi", po::value<double>(&options.gbpIter)->default_value(-1),   "gen belief propagation stop (iterations)")
@@ -449,6 +447,11 @@ double  BpInterface::computeVariableOrder(int numTries, double timeLimit){
 // Does Loopy BP on factGraph
 bool BpInterface::doLoopyBP() {
   /*** LOOPY BELIEF PROPAGATION ******************************************************/
+
+  //////// DELETE ME ///////
+  //  options.lbpTime = 5000000;
+  ////////////////////////
+
   mex::graphModel fg(*facts);
 
   mex::lbp _lbp(*facts); 
@@ -456,7 +459,7 @@ bool BpInterface::doLoopyBP() {
   if (options.lbpIter != 0 && options.lbpTime > 0) {
     _lbp.setProperties("Schedule=Priority,Distance=L1");
     _lbp.setStopIter(options.lbpIter); 
-    _lbp.setStopMsg(options.lbpErr);
+    _lbp.setStopMsg(-1);
     _lbp.setStopObj(options.lbpObj);
     _lbp.setStopTime(options.lbpTime);
     _lbp.init();
@@ -465,8 +468,6 @@ bool BpInterface::doLoopyBP() {
   printf("BP factors:\n");
   mex::vector<Factor> temp = _lbp.beliefs();
   printFactors(&temp);
-  options.lbpTime = 5000;
-  options.lbpErr = -1;
   //////////////////////////////////////////
     
     _lbp.run();
@@ -637,7 +638,7 @@ bool BpInterface::doIterativeConditioning(){
 	  }
 
 	  mex::lbp fgcond(fcond); fgcond.setProperties("Schedule=Priority,Distance=L1");
-	  fgcond.setStopIter(options.lbpIter); fgcond.setStopMsg(options.lbpErr); fgcond.setStopObj(options.lbpObj);
+	  fgcond.setStopIter(options.lbpIter); fgcond.setStopMsg(-1); fgcond.setStopObj(options.lbpObj);
 	  fgcond.setStopTime(0.5);
 	  fgcond.init();
 	  fgcond.run();
@@ -758,7 +759,8 @@ bool BpInterface::tryExactPR(const graphModel& gm, const mex::VarOrder& order) {
     ////////////////DELETE ME////////////////////
     //order[0] = 0; order[1] = 1;
     printf("MBE Factors\n");
-    //    printFactors(mb._gmo.factors());
+    mex::vector<Factor> temp = mb._gmo.factors();
+    printFactors(&temp);
     std::cout << "Order: "<< order[0] << " " <<order[1]<< std::endl;
     /////////////////////////////////////
     
@@ -772,6 +774,7 @@ bool BpInterface::tryExactPR(const graphModel& gm, const mex::VarOrder& order) {
       std::cout<<"Exact solution by MBE: "<<logZ<<"\n";
       return true;
     }
+    
   } catch (std::exception& e) {
     // Failed (probably for memory reasons) => try GBP
     std::cout<<"Failed (due to memory problem?)  Trying GBP\n";
