@@ -329,7 +329,7 @@ bool BpInterface::parseCommandOptions(int argc, char** argv){
   if (vm.count("seed")) { mex::randSeed( vm["seed"].as<int>() ); }
   if (vm.count("task")) { taskName= vm["task"].as<std::string>().c_str(); task=Task(taskName); }
   else { std::cout<<"Missing task!\n"; return false; }
-
+  return true;
 } 
 
 
@@ -391,9 +391,9 @@ bool BpInterface::readUaiFile()
   }
 
   /////////////// DELETE ME ////////////////
-  printf("\nInitialized Factors: \n");
-  printFactors(facts);
-  printf("\n\n");
+  // printf("\nInitialized Factors: \n");
+  // printFactors(facts);
+  //printf("\n\n");
   /////////////////////////////////
   bel = new mex::vector<Factor>(nvar);
   return true;
@@ -465,9 +465,9 @@ bool BpInterface::doLoopyBP() {
     _lbp.init();
   ///////////////////// DELETE ME ////////////////////////
   printf("Beginning Loopy BP\n");
-  printf("BP factors:\n");
-  mex::vector<Factor> temp = _lbp.beliefs();
-  printFactors(&temp);
+  // printf("BP factors:\n");
+  // mex::vector<Factor> temp = _lbp.beliefs();
+  // printFactors(&temp);
   //////////////////////////////////////////
     
     _lbp.run();
@@ -487,9 +487,9 @@ bool BpInterface::doLoopyBP() {
     _lbp.reparameterize();                                         // Convert loopy bp results to model
     factGraph=graphModel(_lbp.factors());
     /////////////////////// DELETE ME ///////////////////////////
-    printf("Loopy BP factors after reparameterization \n");
-    //printFactors(_lbp.factors());
-    printf("FG Factors\n");
+    // printf("Loopy BP factors after reparameterization \n");
+    // //printFactors(_lbp.factors());
+    // printf("FG Factors\n");
     // printFactors(fg.factors());
     //////////////////////
 
@@ -758,10 +758,10 @@ bool BpInterface::tryExactPR(const graphModel& gm, const mex::VarOrder& order) {
     
     ////////////////DELETE ME////////////////////
     //order[0] = 0; order[1] = 1;
-    printf("MBE Factors\n");
-    mex::vector<Factor> temp = mb._gmo.factors();
-    printFactors(&temp);
-    std::cout << "Order: "<< order[0] << " " <<order[1]<< std::endl;
+    // printf("MBE Factors\n");
+    // mex::vector<Factor> temp = mb._gmo.factors();
+    // printFactors(&temp);
+    // std::cout << "Order: "<< order[0] << " " <<order[1]<< std::endl;
     /////////////////////////////////////
     
     mb.setOrder(order);
