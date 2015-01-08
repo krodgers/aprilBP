@@ -6,7 +6,7 @@
  *      Author: kathryn rodgers
  */
 
-#include "BpInterfaceTakeTwo.h"
+#include "BPinterface.h"
 #include "mbe.h"
 #include <cstring>
 #include <cstdio>
@@ -27,9 +27,8 @@ bool BpInterface::initialize(algOptions opts, bool useDefault, double totalTime)
   
   bool result;
   options = algOptions();
-  // TOOD:: init options
-  // TODO:: make sure the files can be opened
-  // Check problem file
+  
+  // Check files are valid
   ifstream is; is.open(opts.problemFile);
   if (!is.is_open()) {
     if(options.doVerbose)
@@ -55,12 +54,10 @@ bool BpInterface::initialize(algOptions opts, bool useDefault, double totalTime)
   // Initializes with a moderate time limit
   options.lbpTime == 0 ?  10 : options.lbpTime; 
   options.lbpIter == 0 ? 2000 : options.lbpIter;
-  options.lbpObj = 0? -1: options.lbpObj;
   options.nOrders == 0?  1000 : options.nOrders; 
   options.timeOrder == 0 ?  60: options.timeOrder; 
   options.nExtra == 0 ?  3: options.nExtra;
   options.gbpTime == 0 ?  1000: options.gbpTime; 
-  options.gbpObj == 0 ?  1e-2: options.gbpObj; 
   options.gbpIter == 0 ?  -1: options.gbpIter;
   dt == 0 ?  30: dt;
   options.iboundInit == 0 ?  30: options.iboundInit;
@@ -89,7 +86,7 @@ bool BpInterface::initialize(int argc,char** argv )  {
     if(!readEvidenceFile())
       return false;
 
- // set up data structures
+  // set up data structures
   isExact = false;
   phase = Phase::LBP;
   logZ = 0;
@@ -142,25 +139,24 @@ bool BpInterface::initialize(double totalTime, char* task, char* problemFile, ch
     // Small time limit
     options.lbpTime = 1.5;  options.lbpIter = 2000;  
     options.nOrders = 100; options.timeOrder = 1.5; options.nExtra = 2;
-    options.gbpTime = 300; options.gbpObj = 1e-2; options.gbpIter = -1; dt = 0.5;
+    options.gbpTime = 300; options.gbpIter = -1; dt = 0.5;
     options.iboundInit = 30; options.MemLimit = std::min(options.MemLimit, 300.0);
     options.doCond = 1;options.ijgp = false;
   }	else if (totalAvailableTime < 1800) {					// Moderate time limit
     options.lbpTime = 10;  options.lbpIter = 2500;
     options.nOrders = 1000; options.timeOrder = 60; options.nExtra = 3;
-    options.gbpTime = 1000; options.gbpObj = 1e-2; options.gbpIter = -1; dt = 30;
+    options.gbpTime = 1000; options.gbpIter = -1; dt = 30;
     options.iboundInit = 30;
     options.doCond = 1; options.ijgp = true;
   } else {																// Large time limit
     options.lbpTime = 15;  options.lbpIter = 3000;
     options.nOrders = 1000; options.timeOrder = 100; options.nExtra = 3;
-    options.gbpTime = 1000; options.gbpObj = 1e-2; options.gbpIter = -1; dt = 30;
+    options.gbpTime = 1000;  options.gbpIter = -1; dt = 30;
     options.iboundInit = 30; 
     options.doCond = 1; options.ijgp = true;
   }
   if (options.task==Task::PR) options.gbpIter=1;
   if (options.task==Task::MAR) options.gbpIter=2;
-  options.lbpObj = -1;
 
   if(options.doVerbose) std::cout<<"Memory limit set to "<<options.MemLimit<<"mb\n";
 
@@ -168,7 +164,7 @@ bool BpInterface::initialize(double totalTime, char* task, char* problemFile, ch
   isExact = false;
   phase = Phase::LBP;
   logZ = 0;
- 
+  flag = Phase::LBP;
   
   return true;
 }
@@ -184,19 +180,36 @@ bool BpInterface::estimateComplexity(int &timeComplexity, int &memComplexity){
 */
 bool BpInterface::runInference()
 {
-
-  doLoopyBP();
-  printf("logZ : %g\n", logZ);
-  doGeneralBP();
-  printf("logZ : %g\n", logZ);
-  doIterativeConditioning();
-  printf("logZ : %g\n", logZ);
-  // TODO:: put in timing 
-  if (!options.doCond) {
-    std::cout<<"Quitting after GBP\n";
+  if(isExact || flag == Phase::DONE || phase == Phase::DONE) // answer already exact
     return true;
-  }
+
+  //TODO:: check flag before setting phase
+  //TODO:: init flag
+  double startTime = timeSystem();
+  bool success;
+
   
+  switch(phase){
+    
+  case Phase::LBP: 
+    if(flag == Phase::DONE || isExact)
+      return true;
+    if(!doLoopyBP()) return false;
+    phase = Phase::GBP;
+    
+  case Phase::GBP:
+    if(flag == Phase::DONE || isExact)
+      return true;
+    if(! doGeneralBP()) return false;
+    phase = Phase::ITERCOND;
+    
+  case Phase::ITERCOND:  
+    if(flag == Phase::DONE || isExact)
+      return true;
+    if(!doIterativeConditioning()) return false;
+    phase = Phase::LBP;
+  } 
+  return success;
 }
 /*
   returns the solution
@@ -300,10 +313,10 @@ bool BpInterface::parseCommandOptions(int argc, char** argv){
     ("memory,m", po::value<double>(&options.MemLimit)->default_value(2*1024.0),    "memory bound (MB)")
     ("lbps", po::value<double>(&options.lbpTime)->default_value(300),  "loopy belief propagation stop (seconds)")
     ("lbpi", po::value<double>(&options.lbpIter)->default_value(2000), "loopy belief propagation stop (iterations)")
-    ("lbpo", po::value<double>(&options.lbpObj )->default_value(-1),   "loopy belief propagation stop (objective)")
+    //    ("lbpo", po::value<double>(&options.lbpObj )->default_value(-1),   "loopy belief propagation stop (objective)")
     ("gbps", po::value<double>(&options.gbpTime)->default_value(300),  "gen belief propagation stop (seconds)")
     ("gbpi", po::value<double>(&options.gbpIter)->default_value(-1),   "gen belief propagation stop (iterations)")
-    ("gbpo", po::value<double>(&options.gbpObj )->default_value(-1),   "gen belief propagation stop (objective)")
+    //    ("gbpo", po::value<double>(&options.gbpObj )->default_value(-1),   "gen belief propagation stop (objective)")
     ("condition", po::value<int>(&options.doCond )->default_value(0),"do conditioning search after gbp (0=no,1=incremental,k=at most k states)")
     ("verbose", "verbose output during algorithm execution")
     ("ijgp", "use ijgp regions only")
@@ -460,7 +473,8 @@ bool BpInterface::doLoopyBP() {
     _lbp.setProperties("Schedule=Priority,Distance=L1");
     _lbp.setStopIter(options.lbpIter); 
     _lbp.setStopMsg(-1);
-    _lbp.setStopObj(options.lbpObj);
+    // _lbp.setStopObj(options.lbpObj);
+    _lbp.setStopObj(-1);
     _lbp.setStopTime(options.lbpTime);
     _lbp.init();
   ///////////////////// DELETE ME ////////////////////////
@@ -528,7 +542,9 @@ bool BpInterface::doGeneralBP() {
       std::cout<<"GBP with "<<_gbp.nRegions()<<" regions; mem "<<_gbp.memory()<<"M\n";
       _gbp.setProperties("Schedule=Fixed");
       _gbp.init();
-      _gbp.setStopIter(options.gbpIter); _gbp.setStopObj(options.gbpObj); _gbp.setStopMsg(-1.0); 
+      _gbp.setStopIter(options.gbpIter); 
+      //_gbp.setStopObj(options.gbpObj); _gbp.setStopMsg(-1.0); 
+      _gbp.setStopObj(-1); _gbp.setStopMsg(-1.0); 
       _gbp.setVerbose(options.doVerbose);
       if (isExact) _gbp.setDamping(-1.0);  // no damping if we think it's exact
       // Get region indices for single-variable beliefs
@@ -551,14 +567,14 @@ bool BpInterface::doGeneralBP() {
 	} break;
 	}
 	std::cout<<"GBP "<<_gbp.logZ()/c_log10<<"\n";
-	if (_gbp.dObj() < options.gbpObj) { std::cout<<"Reached objective tolerance\n"; break; }
+	//	if (_gbp.dObj() < options.gbpObj) { std::cout<<"Reached objective tolerance\n"; break; }
 	if (_gbp.iter() >= options.gbpIter && options.gbpIter > 0) { std::cout<<"Reached iteration limit\n"; break; }
 	if (_gbp.logZ() == -mex::infty()) { std::cout<<"Model deemed inconsistent\n"; break; }
 		
       }
       doneGBP = true;
 
-      if (isExact && _gbp.dObj()<options.gbpObj) { //InducedWidth <= ibound)
+      if (isExact && _gbp.dObj()<.0001) { //InducedWidth <= ibound)
 	std::cout<<"Answer should be exact\n";
 	return 0;
       }
@@ -638,7 +654,9 @@ bool BpInterface::doIterativeConditioning(){
 	  }
 
 	  mex::lbp fgcond(fcond); fgcond.setProperties("Schedule=Priority,Distance=L1");
-	  fgcond.setStopIter(options.lbpIter); fgcond.setStopMsg(-1); fgcond.setStopObj(options.lbpObj);
+	  fgcond.setStopIter(options.lbpIter); fgcond.setStopMsg(-1); 
+	  //  fgcond.setStopObj(options.lbpObj);
+	  fgcond.setStopObj(-1);
 	  fgcond.setStopTime(0.5);
 	  fgcond.init();
 	  fgcond.run();
@@ -650,7 +668,10 @@ bool BpInterface::doIterativeConditioning(){
 	  if (options.ijgp) _gbp.setMinimal(true); else _gbp.setMinimal(false);  // use "ijgp-like" regions?
 	  isExact = gbpPopulateCliques(_gbp,order,ibound,&cond);
 	  _gbp.setProperties("Schedule=Fixed");
-	  _gbp.setStopIter(options.gbpIter); _gbp.setStopObj(options.gbpObj); _gbp.setStopMsg(-1.0);
+	  _gbp.setStopIter(options.gbpIter); 
+	   _gbp.setStopMsg(-1.0);
+	   //_gbp.setStopObj(options.gbpObj);
+	   _gbp.setStopObj(-1);
 	  _gbp.setStopTime(options.gbpTime); _gbp.setVerbose(options.doVerbose);
 	  _gbp.init();
 

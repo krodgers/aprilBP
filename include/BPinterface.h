@@ -42,8 +42,8 @@ namespace lgbp {
 
     typedef struct {
       double MemLimit;
-      double lbpTime, lbpIter, lbpObj;
-      double gbpTime, gbpIter, gbpObj;
+      double lbpTime, lbpIter;
+      double gbpTime, gbpIter;
       int    doCond;
       bool   doVerbose; // toggles printing to std::out
       int    iboundInit; // initial ibound liimit
@@ -77,24 +77,25 @@ namespace lgbp {
     bool initialize(int argc, char** argv); // Initialize the computation. Returns true on success.
     bool initialize(algOptions opts, bool useDefault, double totalTime); // Initialize with given paramters; not all paramters are required
     bool initialize(double totalTime, char* task, char* problemFile, char* orderFile, char* evidenceFile, bool verbose);
-    
+ 
 
     bool estimateComplexity(int &timeComplexity, int &memComplexity);  // Does nothing right now  
     bool getSolution(double  &PR); // get the solution for PR
     bool getSolution(mex::vector<Factor> &MAR); // get solution for MAR
 
     bool runInference(); // runs the inference algorithm for a small amount of time. Meant to be called repeatedly
-    void printFactors(mex::vector<mex::Factor> *flist);
-
+    bool resetSolver();
+    bool stopComputation();
 
   private:
     //
     // Fields
     //
-    MEX_ENUM(Phase , EXACT, LBP, GBP, ITERCOND, DONE );
+    MEX_ENUM(Phase ,  LBP, GBP, ITERCOND, DONE );
 
     int task; // which task we're doing
-    int phase; // track if stop command has been sent   
+    int phase; // track which part of the inference we're doing
+    int flag; // track if inference has been told to stop
     mex::vector<Factor>* bel; // stores results for MAR
     mex::vector<Factor>* facts; // stores the factors 
     VarSet evVar; // evidence variables
@@ -123,7 +124,8 @@ namespace lgbp {
     bool gbpPopulateCliques(mex::gbp& _gbp, const mex::VarOrder& order, size_t& ibound, VarSet* cond);
     bool readEvidenceFile();
     bool readUaiFile();
-
+    void printFactors(mex::vector<mex::Factor> *flist);
+    
   };
 
 }  // namespace lgbp
