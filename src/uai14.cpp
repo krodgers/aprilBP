@@ -1,5 +1,5 @@
 // Wrapper for UAI competition code
-// 
+//
 
 #include <cstdio>
 #include <iostream>
@@ -78,7 +78,7 @@ void writeMPE(const char* outfile, const mex::vector<mex::index>& xhat) {
   ofstream os(outfile);
   os<<"MPE\n";
   os<<xhat.size()<<" ";
-  for (size_t i=0;i<xhat.size();++i) os<<xhat[i]<<" "; 
+  for (size_t i=0;i<xhat.size();++i) os<<xhat[i]<<" ";
   os<<"\n";
   os.close();
 }
@@ -149,7 +149,7 @@ int main(int argc, char* argv[])
 
   po::variables_map vm;
   //po::store(po::parse_command_line(argc,argv,desc),vm);
-  po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm); 
+  po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
   po::notify(vm);
 
   /*** ARGUMENT CHECKING *************************************************************/
@@ -172,19 +172,19 @@ int main(int argc, char* argv[])
     if (!vm.count("seed")) mex::randSeed( 1234 );
     if (inftime!=NULL) TotalTime = atof(inftime);
     if (TotalTime < 60.0) {									// Small time limit
-      lbpTime = 1.5; lbpErr = 1e-4; 
+      lbpTime = 1.5; lbpErr = 1e-4;
       nOrders = 100; timeOrder = 1.5; nExtra = 2;
       gbpTime = 300; gbpObj = 1e-2; gbpIter = -1; dt = 0.5;
       iboundInit = 30; MemLimit = std::min(MemLimit, 300.0); memUseRandom=std::exp(28);
       doCond = 1;
     }	else if (TotalTime < 1800) {					// Moderate time limit
-      lbpTime = 10; lbpErr = 1e-4; 
+      lbpTime = 10; lbpErr = 1e-4;
       nOrders = 1000; timeOrder = 60; nExtra = 3;
       gbpTime = 1000; gbpObj = 1e-2; gbpIter = -1; dt = 30;
       iboundInit = 30; memUseRandom=std::exp(30);
       doCond = 1;
     } else {																// Large time limit
-      lbpTime = 15; lbpErr = 1e-4; 
+      lbpTime = 15; lbpErr = 1e-4;
       nOrders = 1000; timeOrder = 100; nExtra = 3;
       gbpTime = 1000; gbpObj = 1e-2; gbpIter = -1; dt = 30;
       iboundInit = 30; memUseRandom=std::exp(40);
@@ -223,7 +223,7 @@ int main(int argc, char* argv[])
     if (nEvid > 0) {
       int nEvidVar; is2 >> nEvidVar;
       for (size_t i=0;i<nEvidVar;i++) {
-        uint32_t vid; size_t vval; is2>>vid>>vval; 
+        uint32_t vid; size_t vval; is2>>vid>>vval;
         evid[vid]=vval; evVar |= Var(vid,0);
 	xhat[vid]=vval;
       }
@@ -232,7 +232,7 @@ int main(int argc, char* argv[])
         if (flist[f].vars().intersects(evVar)) {
           VarSet overlap = flist[f].vars() & evVar;
           evVar += overlap;         // correct missing dimension information
-          for (size_t v=0;v<overlap.nvar();++v) 
+          for (size_t v=0;v<overlap.nvar();++v)
             bel[overlap[v].label()]=Factor::delta(overlap[v],evid[overlap[v].label()]);
           flist[f] = flist[f].condition( overlap, sub2ind(overlap,evid) );
 	  // !!! TODO:FIX: if no variables left, create delta functions with constant value?
@@ -249,10 +249,10 @@ int main(int argc, char* argv[])
   //if (task==Task::MPE) { std::cout<<": not supported!\n"; return 1; }
 
   if (task==Task::MMAP) {
-    //std::string queryFile(probName); queryFile += ".query"; 
-    std::string queryFile = vm["query"].as<std::string>(); 
+    //std::string queryFile(probName); queryFile += ".query";
+    std::string queryFile = vm["query"].as<std::string>();
     std::cout<<": query "<<queryFile;
-    ifstream qis(queryFile.c_str()); 
+    ifstream qis(queryFile.c_str());
     if (!qis.is_open()) { std::cout<<" does not exist!\n"; return 1; }
     int nMAP; qis >> nMAP;
     for (size_t i=0; i<nMAP; ++i) {
@@ -280,16 +280,16 @@ int main(int argc, char* argv[])
   mex::graphModel fg(flist);
 
   if (task==Task::PR || task==Task::MAR || task==Task::MMAP) {
-    mex::lbp _lbp(flist); 
+    mex::lbp _lbp(flist);
     std::cout<<"Model has "<<nvar<<" variables, "<<_lbp.nFactors()<<" factors\n";
     if (lbpIter != 0 && lbpTime > 0) {
       _lbp.setProperties("Schedule=Priority,Distance=L1");
-      _lbp.setStopIter(lbpIter); 
+      _lbp.setStopIter(lbpIter);
       _lbp.setStopMsg(lbpErr);
       _lbp.setStopObj(lbpObj);
       _lbp.setStopTime(lbpTime);
       _lbp.init();
-  
+
       _lbp.run();
       switch (task) {
       case Task::PR: writePR(outfile,_lbp.logZ()); break;
@@ -310,13 +310,13 @@ int main(int argc, char* argv[])
       _mplp.setStopIter(lbpIter); _mplp.setStopMsg(lbpErr); _mplp.setStopObj(lbpObj); _mplp.setStopTime(lbpTime);
       _mplp.init();
       _mplp.run();
-      mex::vector<mex::index> best = _mplp.best(); 
+      mex::vector<mex::index> best = _mplp.best();
       for (size_t v=0;v<best.size();++v) if (!evVar.contains(Var(v,0))) xhat[v]=best[v];
       //for (VarSet::const_iterator v=evVar.begin();v!=evVar.end();++v) best[*v]=xhat[*v];
       std::cout<<"MPLP "<<fg.logP(xhat)<<" ("<<_mplp.ub()<<")\n";
       //xhat = best;
       mex::vector<mex::index> tmp(xhat.begin(),xhat.end());
-      if (fg.logP(xhat) > -mex::infty()) writeMPE(outfile,tmp); 
+      if (fg.logP(xhat) > -mex::infty()) writeMPE(outfile,tmp);
       fg = graphModel(_mplp.beliefs());
       if (fg.logP(xhat) == -mex::infty()) {
 	std::cout<<"Trying Gibbs...\n";
@@ -347,7 +347,7 @@ int main(int argc, char* argv[])
     const char *orderFile = NULL;				// Check for pre-specified elimination order file
     if (vm.count("order-file")) { orderFile = vm["order-file"].as<std::string>().c_str(); }
     ifstream orderIStream; if (orderFile!=NULL) orderIStream.open(orderFile);
-    if (orderIStream.is_open()) { 
+    if (orderIStream.is_open()) {
       // If we were given an input file with an elimination ordering, just use that
       std::cout << "Reading elimination order from "<<orderFile<<"\n";
       size_t ordersize;  orderIStream>>ordersize; assert(ordersize == order.size());
@@ -356,7 +356,7 @@ int main(int argc, char* argv[])
     } else {
       // Otherwise, calculate elimination order(s) ////////////////////////////////////
       double startOrder = timeSystem();
-      size_t iOrder = 0;			
+      size_t iOrder = 0;
       // Try to build new orders until time or count limit reached ////////////////////
       while (iOrder < nOrders && (timeSystem()-startOrder < timeOrder)) {
 	score = fg.order(mex::graphModel::OrderMethod::WtMinFill, order, nExtra, score);
@@ -365,16 +365,16 @@ int main(int argc, char* argv[])
       if (score < memUseRandom) InducedWidth = fg.inducedWidth(order);
       std::cout<<"Best order of "<<iOrder<<" has induced width "<<InducedWidth<<", score "<<score<<"\n";
 
-      // If we were given an ordering file name but no file, write our order out 
+      // If we were given an ordering file name but no file, write our order out
       ofstream orderOStream; if (orderFile!=NULL) orderOStream.open(orderFile);
       if (orderOStream.is_open()) {
 	std::cout << "Writing elimination order to "<<orderFile<<"\n";
-	orderOStream<<order.size(); 
-	for (size_t i=0;i<order.size();++i) orderOStream<<" "<<order[i]; 
+	orderOStream<<order.size();
+	for (size_t i=0;i<order.size();++i) orderOStream<<" "<<order[i];
 	orderOStream<<"\n";
 	orderOStream.close();
       }
-    } 
+    }
 
     // Try an exact solver and quit if it fits in memory
     if (task==Task::PR && tryExactPR(fg,order)) return 0;   // TODO: Need to debug without this...
@@ -388,8 +388,8 @@ int main(int argc, char* argv[])
 
   bool doneGBP=false, isExact=false;
   if (doVerbose) std::cout<<"\n"<<"Beginning basic GBP...\n";
-  while (!doneGBP) { 
-    if (MemLimit > 0) { 
+  while (!doneGBP) {
+    if (MemLimit > 0) {
       _gbp.clearRegions();
       isExact = gbpPopulateCliques(_gbp,order,ibound,NULL);
     } else {
@@ -398,17 +398,17 @@ int main(int argc, char* argv[])
     }
 
     try {
-      // Run GBP on the region graph 
+      // Run GBP on the region graph
       std::cout<<"GBP with "<<_gbp.nRegions()<<" regions; mem "<<_gbp.memory()<<"M\n";
       if (task==Task::MPE) _gbp.setTask(mex::gbp::Task::Max);
       //_gbp.setProperties("Schedule=Priority,StopIter=200,StopObj=-1,StopMsg=1e-6");
       _gbp.setProperties("Schedule=Fixed");
       _gbp.init();
       if (task==Task::MPE) _gbp.setBest( mex::vector<mex::index>(xhat.begin(),xhat.end()) );
-      _gbp.setStopIter(gbpIter); _gbp.setStopObj(gbpObj); _gbp.setStopMsg(-1.0); 
+      _gbp.setStopIter(gbpIter); _gbp.setStopObj(gbpObj); _gbp.setStopMsg(-1.0);
       _gbp.setVerbose(doVerbose);
       if (isExact) _gbp.setDamping(-1.0);  // no damping if we think it's exact
-      if (task==Task::MMAP || task==Task::MPE) { 
+      if (task==Task::MMAP || task==Task::MPE) {
 	_gbp.setDamping(-1.0);  // no damping for hacky proximal mmap or mpe
 	_gbp.setStopObj(-1.0); gbpObj=-1.0;  // also, no objective stopping (since proximal will update)
       }
@@ -424,7 +424,7 @@ int main(int argc, char* argv[])
 	_gbp.setStopTime( std::min( dt , gbpLeft ) );
 	_gbp.run();
 	switch (task) {
-	case Task::PR: writePR(outfile,_gbp.logZStable()); break; 
+	case Task::PR: writePR(outfile,_gbp.logZStable()); break;
 	case Task::MAR: {
 	  //for (size_t v=0;v<nvar;++v) if (!evVar.contains(Var(v,0))) bel[v]=_gbp.belief(Var(v,0));
 	  for (size_t v=0;v<nvar;++v) if (!evVar.contains(Var(v,0))) bel[v]=_gbp.computeRegionBelief(regions[v]).marginal(Var(v,0));
@@ -446,7 +446,7 @@ int main(int argc, char* argv[])
 	  writeMMAP(outfile,xhat);
 	  for (VarSet::const_iterator v=maxVars.begin();v!=maxVars.end();++v) {
 	    _gbp.__factor(regions[*v]) += log(bel[*v]);			// proximal: remove entropy (subtract -log(b)) from factors
-	    // if GBP is not using GBP_LOG (???) should multiply regions[v] factor by bel[v] 
+	    // if GBP is not using GBP_LOG (???) should multiply regions[v] factor by bel[v]
 	    // !!!! Note, this is not the right way to do this; it should be done in the gbp object...
 	  }
 	} break;
@@ -455,7 +455,7 @@ int main(int argc, char* argv[])
 	if (_gbp.dObj() < gbpObj) { std::cout<<"Reached objective tolerance\n"; break; }
 	if (_gbp.iter() >= gbpIter && gbpIter > 0) { std::cout<<"Reached iteration limit\n"; break; }
 	if (_gbp.logZ() == -mex::infty()) { std::cout<<"Model deemed inconsistent\n"; break; }
-		
+
       }
       doneGBP = true;
 
@@ -491,7 +491,7 @@ int main(int argc, char* argv[])
   if (task==Task::MMAP || task==Task::MPE) { std::cout<<"Conditioning not supported for MPE/MMAP\n"; return 0; }
   if (doVerbose) std::cout<<"\n"<<"Beginning conditioned GBP...\n";
   if (order.size()==0) order=fg.order(mex::graphModel::OrderMethod::MinWidth);  // need an order if none yet...
- 
+
   _gbp = mex::gbp( mex::vector<Factor>() );  // !!! blank out GBP object; restore memory
   VarSet cond;
 
@@ -576,7 +576,7 @@ int main(int argc, char* argv[])
 	  for (size_t v=0;v<cond.size();++v) std::cout<<cond[v]<<"="<<val[cond[v]]<<" "; std::cout<<lnZ[i]<<"\n";
     	}
     	if (failed) {std::cout<<"Failing out\n"; doneCGBP=true; continue;} // if we failed out, condition on more vars
-    	
+
 	doneCGBP=true;
     	double lnZtot = lnZ.logsumexp();
     	switch (task) {

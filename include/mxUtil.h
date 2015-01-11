@@ -36,11 +36,11 @@ namespace mex {
   inline double infty()          { return std::numeric_limits<double>::infinity(); }
 #endif
 
-
+ 
 // Returns system (wall clock) time in seconds
 inline double timeSystem() {
 #ifdef WINDOWS
-
+	
     SYSTEMTIME tbuf;
     GetSystemTime(&tbuf);
     return( (double)(tbuf.wSecond + (double)tbuf.wMilliseconds / 1000.0) );

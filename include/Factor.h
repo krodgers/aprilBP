@@ -22,6 +22,7 @@
 #include <iostream>
 #include <limits>
 #include <algorithm>
+//#include <algorithm.h>
 #include <numeric>
 #include <float.h>
 #include <vector>
@@ -31,6 +32,8 @@
 #include "VarSet.h"
 #include "subindex.h"
 #include "vector.h"
+
+using namespace std;
 
 namespace mex {
 
@@ -175,7 +178,7 @@ class Factor : public virtual mxObject {
   struct unOpLogL  { value l; unOpLogL(value L):l(L) {}; value operator()(value a)  { return std::log(a)/l;  } };
   struct unOpLog10 { value operator()(value a)  { return std::log10(a);} };
   
-  struct myMin { value operator()(value a,value b)  { return std::min(a,b);} };
+  struct myMin { value operator()(value a, value b)  { return std::min(a, b); } };
   struct myMax { value operator()(value a,value b)  { return std::max(a,b);} };
 
 ////////////////////////////////////////////////////////////////////////////////

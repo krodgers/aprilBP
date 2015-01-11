@@ -6,6 +6,12 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////////
 
+
+#ifdef WINDOWS
+#include "stdafx.h"
+#include <iostream>
+#endif
+
 //#include <assert>
 #include <cmath>
 #include <cstring>
