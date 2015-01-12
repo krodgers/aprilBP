@@ -26,7 +26,7 @@
 #include "BPinterface.h"
 #endif
 
-#include <APPRIL_Interface.h>
+#include "APPRIL_Interface.h"
 
 // this class is used to automatically initialize/terminate the APPRIL interface, e.g. when the module is loaded/unloaded.
 class ARRPIL_INTERFACE_AUTO_CONSTR_DESTR
@@ -182,7 +182,7 @@ public :
 	daoopt::DaooptInterface _daoopt ;
 #endif // defined USING_DAOOPT
 #if defined USING_BP
-lgbp::BpInterface;
+  lgbp::BpInterface _bp;
 #endif // defined USING_BP
 public :
 	int SetProblemData(const char *Format, const char *Buffer, int Len, const char *EvidenceBuffer, int EvidenceLen)
@@ -259,7 +259,10 @@ public :
 		// Nothing to do; when running regular "CheckQueryComputationStatus", a batch of search nodes are expanded.
 #endif // USING_DAOOPT
 #if defined USING_BP
-    
+		if(!_bp.runInference())
+		  {
+		    return APPRIL_INTERFACE_ERROR_UNKNOWN;
+		  }
 #endif
 		return 0 ;
 	}
@@ -293,6 +296,9 @@ public :
 				}
 			}
 #endif // USING_DAOOPT
+#if defined USING_BP
+		return APPRIL_ERROR_NOT_IMPLEMENTED;
+#endif
 		return 0 ;
 	}
 	int StopQueryComputation(void)
@@ -311,7 +317,10 @@ public :
 #if defined USING_DAOOPT
 		// Nothing to do
 #endif // USING_DAOOPT
+#if defined USING_BP
+		_bp.stopComputation();
 		return 0 ;
+#endif
 	}
 	int StartProblemAnalysis(void)
 	{
@@ -373,6 +382,7 @@ public :
 		ARE::utils::AutoLock lock(_Mutex) ;
 		_CurrentState = state ;
 		_tCurrentState = ARE::GetTimeInMilliseconds() ;
+#ifndef USING_BP
 		if (APPRIL_INTERFACE_STATE_PROBLEM_ANALYZED == _CurrentState) {
 			// check if problem already has a variable ordering
 			if (_Problem->HasVarOrdering()) {
@@ -405,7 +415,13 @@ public :
 				fprintf(APPRIL_fpLOG, "\n%I64d APPRIL_bb : setting state to \"order-analyzed\", variable order in BT order is :\n    ", _tCurrentState) ;
 				for (int i = 0 ; i < _Problem->N() ; i++) 
 					fprintf(APPRIL_fpLOG, " %d", (_Problem->VarOrdering_VarList())[i]) ;
+
 				}
+#endif
+#if defined USING_BP
+			// initialize 
+			
+#endif
 #if defined USING_BUCKET_ELIMINATION
 			// update BEworkspace; this should generate bucket tree and computation schedule.
 			int res_BEwsInit = _BEws.Initialize(*_Problem, NULL, 1) ;

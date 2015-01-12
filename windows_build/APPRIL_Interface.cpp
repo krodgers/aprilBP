@@ -220,6 +220,10 @@ public :
 			_CurrentError = APPRIL_INTERFACE_ERROR_PROBLEM_UNDEFINED ;
 			return APPRIL_INTERFACE_ERROR_FAILED_TO_CONSTRUCT_SOLUTION_WORKSPACE ;
 			}
+#if defined USING_BP
+
+				
+#endif
 #if defined USING_BUCKET_ELIMINATION
 		if (! _BEws.IsValid()) {
 			if (NULL != APPRIL_fpLOG) {

@@ -83,7 +83,7 @@ namespace lgbp {
     bool getSolution(double  &PR); // get the solution for PR
     bool getSolution(mex::vector<Factor> &MAR); // get solution for MAR
 
-    bool runInference(); // runs the inference algorithm for a small amount of time. Meant to be called repeatedly
+    bool runInference(); // runs the inference algorithm
     bool resetSolver();
     bool stopComputation();
 

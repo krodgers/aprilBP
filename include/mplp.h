@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <cstdlib>
 #include <cstring>
+#include <stdio.h>
 
 #include "factorgraph.h"
 #include "alg.h"

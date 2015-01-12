@@ -506,7 +506,7 @@ bool BpInterface::doLoopyBP() {
     // printf("FG Factors\n");
     // printFactors(fg.factors());
     //////////////////////
-
+    return true;
   }
 }
 
@@ -588,6 +588,7 @@ bool BpInterface::doGeneralBP() {
       }
     }
   }
+  return true;
 }
 
 

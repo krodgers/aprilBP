@@ -9,6 +9,8 @@
 #include <stdint.h>
 #include <cstdarg>
 #include <cstring>
+#include <iostream>
+#include <fstream>
 
 #include "graphmodel.h"
 #include "regiongraph.h"
@@ -396,7 +398,8 @@ namespace mex {
       _lnZStable = _lnZ;    // !!!! from "initial" updates
       if (_verbose) std::cout<<"GBP init(): "<<_lnZ<<"\n";
 #ifdef DEBUG  
-      std::ofstream ofs; ofs.open("updates.gbp.txt", std::ofstream::out | std::ofstream::app);
+      std::ofstream ofs; 
+      ofs.open("updates.gbp.txt", std::ofstream::out | std::ofstream::app);
       ofs<<"END GBP INIT: "<<_lnZ<<"\n\n";
       ofs.close();
 #endif
