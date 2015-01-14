@@ -1,0 +1,8 @@
+Directories:
+	data: holds all of the .uai data files
+	include: holds all of the headers
+	linux_build: has makefile and executables for building on linux
+	windows_build: where the VS solution is 
+	test_build: where the project testing interfacing the library with figaro is
+	src: where the .cpp files are
+	results: where the results (ideally) should be stored
