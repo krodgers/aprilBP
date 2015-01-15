@@ -5,6 +5,9 @@ LFLAGS =  -lboost_program_options --static
 SRCDIR = ../src/
 
 
+libBP: $(SRCDIR)BPinterface.cpp $(SRCDIR)Factor.cpp $(SRCDIR)graphmodel.cpp ../src/libBP.cpp 
+
+
 uai_14: Factor.o graphmodel.o  $(SRCDIR)uai14.cpp
 	$(CC) $(CFLAGS)  $(SRCDIR)uai14.cpp graphmodel.o Factor.o $(LFLAGS) -o uai_14
 

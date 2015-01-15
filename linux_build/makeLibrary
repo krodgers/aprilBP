@@ -3,4 +3,5 @@
 javac -d . ../test_build/src/beliefPropagation.java 
 javah -jni -d ../include -jni bp_interface
 
-g++ -shared -fPIC -I/usr/local/share/jdk1.8.0_25/include/linux  -I/usr/local/share/jdk1.8.0_25/include/ -I../include -o ../test_build/resource/libBP.so   ../src/libBP.cpp
+
+g++ -shared -fPIC -I/usr/local/share/jdk1.8.0_25/include/linux  -I/usr/local/share/jdk1.8.0_25/include/ -I../include -lboost_program_options --static -O3 ../src/libBP.cpp ../src/BPinterface.cpp ../src/Factor.cpp ../src/graphmodel.cpp  -o ../test_build/src/libBP.so 
