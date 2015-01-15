@@ -3,5 +3,14 @@
 javac -d . ../test_build/src/beliefPropagation.java 
 javah -jni -d ../include -jni bp_interface
 
+# Compile .o files
+g++ -Wall -fPIC -I../include -c ../src/Factor.cpp  ../src/graphmodel.cpp  ../src/BPinterface.cpp  
+# Compile Library
+#g++ -shared -fPIC -I/usr/local/share/jdk1.8.0_25/include/linux  -I/usr/local/share/jdk1.8.0_25/include/ -I../include -lboost_program_options --static -O3 ../src/libBP.cpp Factor.o graphmodel.o BPinterface.o  -o ../test_build/src/libBP.so 
+g++ -shared -Wl,-soname,libBP.so -I/usr/local/share/jdk1.8.0_25/include/linux  -I/usr/local/share/jdk1.8.0_25/include/ -I../include *.o  -lboost_program_options --static -O3 -o ../test_build/src/libBP.so
 
-g++ -shared -fPIC -I/usr/local/share/jdk1.8.0_25/include/linux  -I/usr/local/share/jdk1.8.0_25/include/ -I../include -lboost_program_options --static -O3 ../src/libBP.cpp ../src/BPinterface.cpp ../src/Factor.cpp ../src/graphmodel.cpp  -o ../test_build/src/libBP.so 
+
+
+
+
+

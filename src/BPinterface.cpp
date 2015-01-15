@@ -25,7 +25,6 @@ opts: given options to use; any non specified options should have value -1/NULL
 */
 bool BpInterface::initialize(algOptions opts, bool useDefault, double totalTime){
   
-  bool result;
   options = algOptions();
   
   // Check files are valid
@@ -52,17 +51,28 @@ bool BpInterface::initialize(algOptions opts, bool useDefault, double totalTime)
  
   // Check all option variables
   // Initializes with a moderate time limit
-  options.lbpTime == 0 ?  10 : options.lbpTime; 
-  options.lbpIter == 0 ? 2000 : options.lbpIter;
-  options.nOrders == 0?  1000 : options.nOrders; 
-  options.timeOrder == 0 ?  60: options.timeOrder; 
-  options.nExtra == 0 ?  3: options.nExtra;
-  options.gbpTime == 0 ?  1000: options.gbpTime; 
-  options.gbpIter == 0 ?  -1: options.gbpIter;
-  dt == 0 ?  30: dt;
-  options.iboundInit == 0 ?  30: options.iboundInit;
-  options.doCond == 0 ?  1: options.doCond; 
-  options.MemLimit ==0 ? 2*1024.0 : options.MemLimit;
+  if( options.lbpTime == 0)
+    options.lbpTime = 10;
+  if(options.lbpIter == 0)
+    options.lbpIter = 2000;
+  if(options.nOrders == 0)
+    options.nOrders = 1000;
+  if(options.timeOrder == 0)  
+    options.timeOrder = 60; 
+  if(options.nExtra == 0)  
+    options.nExtra = 3;
+  if(options.gbpTime == 0)
+    options.gbpTime = 1000; 
+  if(options.gbpIter == 0)
+    options.gbpIter =-1;
+  if(dt == 0)
+    dt =  30;
+  if(options.iboundInit == 0)
+    options.iboundInit = 30;
+  if(options.doCond == 0)
+    options.doCond = 1; 
+  if(options.MemLimit ==0)
+    options.MemLimit = 2*1024.0;
 
  // set up data structures
   isExact = false;
@@ -186,7 +196,7 @@ bool BpInterface::runInference()
   //TODO:: check flag before setting phase
   //TODO:: init flag
   double startTime = timeSystem();
-  bool success;
+  bool success = false;
 
   
   switch(phase){
@@ -277,7 +287,7 @@ bool BpInterface::getSolution(double  &PR)
   Prints out the factors given in flist
 */
 void BpInterface::printFactors(mex::vector<Factor> *flist){
-  for (size_t f=0;f<flist->size();++f)  {        
+  for (size_t f=0; f < flist->size(); ++f)  {        
     std::cout << "(*flist)[" <<f<< "]: nvar(" <<(*flist)[f].nvar() << "), numStates("<<  (*flist)[f].nrStates()<< ")"<<std::endl;
     std::cout <<"(*flist)[" << f << "]: values:" ;
     const double *values = (*flist)[f].table();
@@ -375,8 +385,13 @@ bool BpInterface::readEvidenceFile(){
       }
       // !!! TODO:DEBUG: if no variables left, create delta functions with constant value?
       //for (size_t i=0;i<nEvidVar;++i) facts.push_back( Factor::delta(evVar[i],evid[evVar[i]]) );
+      return true;
     }
-  } else std::cout<<"Evidence file not specified or not found\n";
+  } 
+
+  std::cout<<"Evidence file not specified or not found\n";
+  return false;
+  
   
   
 }
@@ -455,6 +470,7 @@ double  BpInterface::computeVariableOrder(int numTries, double timeLimit){
       }
     }
   }
+  return score;
 } 
 
 // Does Loopy BP on factGraph
@@ -506,8 +522,9 @@ bool BpInterface::doLoopyBP() {
     // printf("FG Factors\n");
     // printFactors(fg.factors());
     //////////////////////
-    return true;
+   
   }
+ return true;
 }
 
 
@@ -606,8 +623,9 @@ bool BpInterface::doIterativeConditioning(){
   printf("Iterative Conditioning and GBP\n");
 
   //////////////////////////////////////////
-  bool exact = false;
-  size_t ibound = options.iboundInit, InducedWidth=10000;
+  isExact = false;
+  size_t ibound = options.iboundInit;
+  //size_t InducedWidth=10000;
 
 
   if (options.doVerbose) std::cout<<"\n"<<"Beginning conditioned GBP...\n";
@@ -730,10 +748,12 @@ bool BpInterface::doIterativeConditioning(){
       }
 
       // !!! TODO: if options.doCond > 1, quit (non-incremental)?
-      if (isExact) { std::cout<<"Answer should be exact\n"; return 0; }
+      if (isExact) { 
+	std::cout<<"Answer should be exact\n"; 
+	return true; }
     }
   }
-
+  return true;
   // run CCS expansion on larger regions until timeout (?)
 }
 

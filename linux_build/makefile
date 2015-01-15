@@ -5,9 +5,6 @@ LFLAGS =  -lboost_program_options --static
 SRCDIR = ../src/
 
 
-libBP: $(SRCDIR)BPinterface.cpp $(SRCDIR)Factor.cpp $(SRCDIR)graphmodel.cpp ../src/libBP.cpp 
-
-
 uai_14: Factor.o graphmodel.o  $(SRCDIR)uai14.cpp
 	$(CC) $(CFLAGS)  $(SRCDIR)uai14.cpp graphmodel.o Factor.o $(LFLAGS) -o uai_14
 
@@ -26,9 +23,6 @@ test_interface.o: $(SRCDIR)test_interface.cpp
 
 BPinterface.o: $(SRCDIR)BPinterface.cpp ../include/BPinterface.h
 	$(CC) -c -g -I../include  $(SRCDIR)BPinterface.cpp 
-
-BpInterfaceTakeTwo.o: $(SRCDIR)BpInterfaceTakeTwo.cpp ../include/BpInterfaceTakeTwo.h
-	$(CC) -c -g -I../include  $(SRCDIR)BpInterfaceTakeTwo.cpp 
 
 graphmodel.o: $(SRCDIR)graphmodel.cpp
 	$(CC) -c -g -I../include  $(SRCDIR)graphmodel.cpp 

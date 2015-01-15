@@ -251,7 +251,7 @@ namespace mex {
 
     MEX_ENUM( ElimType   , Max,Sum);
     vector<ElimType> _elimType;							// !!! should be protected...
-    void setElimType(ElimType e)            { for (int i=0;i<_elimType.size();++i) _elimType[i] = e; }
+    void setElimType(ElimType e)            { for (uint i=0;i<_elimType.size();++i) _elimType[i] = e; }
     void setElimType(Var v, ElimType e)     { _elimType[_vindex(v)] = e; }
     void setElimType(VarSet vs, ElimType e) { for (VarSet::const_iterator v=vs.begin();v!=vs.end();++v) _elimType[_vindex(*v)] = e; }
 
