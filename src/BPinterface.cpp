@@ -379,8 +379,8 @@ bool BpInterface::readEvidenceFile(){
       uint32_t vid; size_t vval; is2>>vid>>vval; 
       evid[vid]=vval; evVar |= Var(vid,0);
       //xhat[vid]=vval;
-      
-      writeLog("Evidence on variables " + evVar );
+      std::stringstream ss("Evidence on variables "); ss << evVar;
+      writeLog( ss.str() );
       for (size_t f=0;f<facts->size();f++) {
         if ((*facts)[f].vars().intersects(evVar)) {
           VarSet overlap = (*facts)[f].vars() & evVar;
@@ -412,7 +412,7 @@ bool BpInterface::readEvidenceFile(){
 bool BpInterface::readUaiFile()
 {
   /*** READ IN PROBLEM FILE **********************************************************/
-  writeLog("Reading model file: " + options.problemFile);
+  writeLog("Reading model file: " + std::string(options.problemFile));
   ifstream is; is.open(options.problemFile);
   if(!is.is_open())
     return false;
@@ -464,8 +464,11 @@ double  BpInterface::computeVariableOrder(int numTries, double timeLimit){
 	++iOrder;
       }
       double InducedWidth;
-      if (score < memUseRandom)  InducedWidth = factGraph.inducedWidth(order);
-      writeLog("Best order of "<<iOrder<<" has induced width "<<InducedWidth<<", score "<<score<<"\n";
+      if (score < memUseRandom)  
+	InducedWidth = factGraph.inducedWidth(order);
+      std::stringstream ss("Best order of ");
+      ss <<iOrder<<" has induced width "<<InducedWidth<<", score "<<score<<"\n";
+      writeLog(ss.str());
 
       // If we were given an ordering file name but no file, write our order out 
       ofstream orderOStream; if (options.orderFile!=NULL) orderOStream.open(options.orderFile);
@@ -492,7 +495,9 @@ bool BpInterface::doLoopyBP() {
   mex::graphModel fg(*facts);
 
   mex::lbp _lbp(*facts); 
-  writeLog("Model has "<<nvar<<" variables, "<<_lbp.nFactors()<<" factors");
+  std::stringstream ss("Model has ");
+  ss<<nvar<<" variables, "<<_lbp.nFactors()<<" factors";
+  writeLog(ss.str());
   if (options.lbpIter != 0 && options.lbpTime > 0) {
     _lbp.setProperties("Schedule=Priority,Distance=L1");
     _lbp.setStopIter(options.lbpIter); 
@@ -519,8 +524,8 @@ bool BpInterface::doLoopyBP() {
 	  (*bel)[v]=_lbp.belief( _lbp.localFactor(v) );
     } break;
     }
-  
-    writeLog("LBP "<<logZ);
+    std::stringstream ss("LBP"); ss<< logZ;
+    writeLog(ss.str());
 
     _lbp.reparameterize();                                         // Convert loopy bp results to model
     factGraph=graphModel(_lbp.factors());
@@ -552,7 +557,7 @@ bool BpInterface::doGeneralBP() {
   else              _gbp.setMinimal(false);
 
   bool doneGBP=false, isExact=false;
-  if (options.doVerbose) writeLog("\n"<<"Beginning basic GBP...\n";
+  if (options.doVerbose) writeLog("Beginning basic GBP...\n");
   while (!doneGBP) { 
     if (options.MemLimit > 0) { 
       _gbp.clearRegions();
@@ -564,7 +569,9 @@ bool BpInterface::doGeneralBP() {
 
     try {
       // Run GBP on the region graph 
-      writeLog("GBP with "<<_gbp.nRegions()<<" regions; mem "<<_gbp.memory()<<"M\n";
+      std::stringstream ss("GBP with ");
+      ss<<_gbp.nRegions()<<" regions; mem "<<_gbp.memory()<<"M";
+      writeLog(ss.str());
       _gbp.setProperties("Schedule=Fixed");
       _gbp.init();
       _gbp.setStopIter(options.gbpIter); 
@@ -591,25 +598,30 @@ bool BpInterface::doGeneralBP() {
 	      bel->at(v) =_gbp.computeRegionBelief(regions[v]).marginal(Var(v,0));
 	} break;
 	}
-	writeLog("GBP "<<_gbp.logZ()/c_log10<<"\n";
+	std::stringstream ss("GBP "); ss<<_gbp.logZ()/c_log10;
+	writeLog(ss.str());
 	//	if (_gbp.dObj() < options.gbpObj) { writeLog("Reached objective tolerance\n"; break; }
-	if (_gbp.iter() >= options.gbpIter && options.gbpIter > 0) { writeLog("Reached iteration limit\n"; break; }
-	if (_gbp.logZ() == -mex::infty()) { writeLog("Model deemed inconsistent\n"; break; }
+	if (_gbp.iter() >= options.gbpIter && options.gbpIter > 0) { 
+	  writeLog("Reached iteration limit"); 
+		   break; }
+		 if (_gbp.logZ() == -mex::infty()) { writeLog("Model deemed inconsistent"); break; }
 		
       }
       doneGBP = true;
 
       if (isExact && _gbp.dObj()<.0001) { //InducedWidth <= ibound)
-	writeLog("Answer should be exact\n";
+	writeLog("Answer should be exact");
 	return 0;
       }
 
     } catch (std::exception& e) {
       if (_gbp.getDamping() > 0.25) {
-	doneGBP=true; writeLog("Caught exception (memory overreach?).  Damping on => quitting GBP\n";
+	doneGBP=true; writeLog("Caught exception (memory overreach?).  Damping on => quitting GBP");
       } else {
     	doneGBP=false; options.MemLimit*=.9; ibound--;
-	writeLog("Caught exception (memory overreach?).  Trying again with ibound "<<ibound<<" and options.MemLimit "<<options.MemLimit<<"\n";
+	std::stringstream ss("Caught exception (memory overreach?).  Trying again with ibound ");
+	ss <<ibound<<" and options.MemLimit "<<options.MemLimit;
+	writeLog(ss.str());
       }
     }
   }
@@ -636,7 +648,7 @@ bool BpInterface::doIterativeConditioning(){
   //size_t InducedWidth=10000;
 
 
-  if (options.doVerbose) writeLog("\n"<<"Beginning conditioned GBP...\n";
+  if (options.doVerbose) writeLog("Beginning conditioned GBP...");
   if (order.size()==0) order=factGraph.order(mex::graphModel::OrderMethod::MinWidth);  // need an order if none yet...
  
   // mex::gbp _gbp = mex::gbp( mex::vector<Factor>() );  // !!! blank out GBP object; restore memory
@@ -647,14 +659,16 @@ bool BpInterface::doIterativeConditioning(){
   while (!isExact) {
     // add check for best conditioner given cardinality limit !!!  or, only increment if anytime...
     cond += factGraph.bestConditioner(order,cond);
-    if (options.doVerbose) writeLog("\n";
-    writeLog("Conditioning "<<cond<<"\n";
+    if (options.doVerbose) {
+      std::stringstream ss("Conditioning "); ss<<cond;
+      writeLog(ss.str());
+	       }
     ibound = options.iboundInit;		// check all iBounds again (in case higher available)
     bool doneCGBP=false;
     while (!doneCGBP) {
       bool useMBE=false;
       if (options.task == Task::PR && fitsMBE(factGraph,order,&cond)) {
-        writeLog("Trying exact via MBE\n";
+        writeLog("Trying exact via MBE");
         useMBE=true; isExact=true;
       }
       try {
@@ -673,11 +687,17 @@ bool BpInterface::doIterativeConditioning(){
 	  try { if (useMBE) {         // if a bucket elim pass was good enough, do that:
 	      mex::graphModel gm(fcond);
 	      lnZ[i] = solveMBE(gm,order);
-	      for (size_t v=0;v<cond.size();++v) writeLog(cond[v]<<"="<<val[cond[v]]<<" "; writeLog(lnZ[i]<<"\n";
+	      std::stringstream ss("");
+	      for (size_t v=0;v<cond.size();++v) 
+		ss << cond[v] << "=" << val[cond[v]] <<" ";
+	      writeLog(ss.str());
+	      ss.str(""); ss << lnZ[i];
+	      writeLog(ss.str());
+
 	      continue;
 	    }                     // otherwise we need to do GBP-like updates:
 	  } catch (std::exception& e) {
-	    writeLog("Caught exception; failure in MBE; trying GBP\n";
+	    writeLog("Caught exception; failure in MBE; trying GBP");
 	  }
 
 	  mex::lbp fgcond(fcond); fgcond.setProperties("Schedule=Priority,Distance=L1");
@@ -724,9 +744,15 @@ bool BpInterface::doIterativeConditioning(){
             	condMarginals[i][v]=_gbp.computeRegionBelief(regions[v]).marginal(Var(v,0));
 	    //condMarginals[i][v]=_gbp.belief(Var(v,0));
 	  }
-	  for (size_t v=0;v<cond.size();++v) writeLog(cond[v]<<"="<<val[cond[v]]<<" "; writeLog(lnZ[i]<<"\n";
+	  	      std::stringstream ss("");
+	      for (size_t v=0;v<cond.size();++v) 
+		ss << cond[v] << "=" << val[cond[v]] <<" ";
+	      writeLog(ss.str());
+	      ss.str(""); ss << lnZ[i];
+	      writeLog(ss.str());
+
     	}
-    	if (failed) {writeLog("Failing out\n"; doneCGBP=true; continue;} // if we failed out, condition on more vars
+    	if (failed) {writeLog("Failing out"); doneCGBP=true; continue;} // if we failed out, condition on more vars
     	
 	doneCGBP=true;
     	double lnZtot = lnZ.logsumexp();
@@ -746,18 +772,22 @@ bool BpInterface::doIterativeConditioning(){
 	  }
 	  break;
     	}
-    	writeLog("Conditioning "<<cond<<" => "<<lnZtot<<" ("<<lnZtot/c_log10<<")\n";
+	std::stringstream ss("Conditioning ");
+	ss <<cond<<" => "<<lnZtot<<" ("<<lnZtot/c_log10<<")";
+    	writeLog(ss.str());
 
       } catch (std::exception& e) {
       	doneCGBP=false; options.MemLimit*=.9; ibound--;
-      	writeLog("Caught exception (memory overreach?).  Trying again with ibound "<<ibound<<" and options.MemLimit "<<options.MemLimit<<"\n";
+	std::stringstream ss("Caught exception (memory overreach?).  Trying again with ibound ");
+	ss <<ibound<<" and options.MemLimit "<<options.MemLimit;
+      	writeLog(ss.str());
       	continue;
 	// TODO: this is right if we're only doing this part, but not right if we're running incrementally
       }
 
       // !!! TODO: if options.doCond > 1, quit (non-incremental)?
       if (isExact) { 
-	writeLog("Answer should be exact\n"; 
+	writeLog("Answer should be exact"); 
 	return true; }
     }
   }
@@ -788,7 +818,7 @@ double BpInterface::solveMBE(const graphModel& gm, const mex::VarOrder& order) {
   mb.setPseudotree(pt);
   mb.setProperties("ElimOp=SumUpper,sBound=inf,DoMatch=1,DoMplp=0,DoFill=0,DoJG=0,DoHeur=0");
   mb.setIBound(100); //double mbMem = mb.simulateMemory(NULL,NULL,mbCutoff,&isExact);
-  writeLog("Attempting exact solve\n";
+  writeLog("Attempting exact solve");
   //writeLog("Attempting exact solve; mbMem="<<mbMem<<" vs "<<mbCutoff<<" ("<<options.MemLimit<<")\n";
   mb.init();
   return mb.logZ();
@@ -818,16 +848,20 @@ bool BpInterface::tryExactPR(const graphModel& gm, const mex::VarOrder& order) {
     mb.setProperties("ElimOp=SumUpper,sBound=inf,DoMatch=1,DoMplp=0,DoFill=0,DoJG=0,DoHeur=0");
     mb.setIBound(100); double mbMem = mb.simulateMemory(NULL,NULL,mbCutoff,&isExact);
     if (mbMem < mbCutoff && isExact) {
-      writeLog("Attempting exact solve; mbMem="<<mbMem<<" vs "<<mbCutoff<<" ("<<options.MemLimit<<")\n";
+      std::stringstream ss("Attempting exact solve; mbMem=");
+      ss<<mbMem<<" vs "<<mbCutoff<<" ("<<options.MemLimit<<")";
+      writeLog(ss.str());
       mb.init();
       logZ = mb.logZ()/c_log10;
-      writeLog("Exact solution by MBE: "<<logZ<<"\n";
+      ss.str("Exact solution by MBE: ");
+       ss << logZ;
+       writeLog(ss.str());
       return true;
     }
     
   } catch (std::exception& e) {
     // Failed (probably for memory reasons) => try GBP
-    writeLog("Failed (due to memory problem?)  Trying GBP\n";
+    writeLog("Failed (due to memory problem?)  Trying GBP");
   }
   return false;
 }
@@ -852,34 +886,38 @@ bool BpInterface::gbpPopulateCliques(mex::gbp& _gbp, const mex::VarOrder& order,
   double mbMem = mb.simulateMemory(&cliques,cond, mbCutoff, &isExact);
   if (mbMem < mbCutoff) { _gbp.addRegions(cliques); mem = _gbp.memory(); }
   while ( ibound > 0 && (mbMem >= mbCutoff || mem > options.MemLimit) ) {
-    writeLog("MBE iBound "<<ibound<<" = "<<mem<<"M\n";
+  std:stringstream ss("MBE iBound ");
+    ss <<ibound<<" = "<<mem<<"M";
+    writeLog(ss.str());
     mb.setIBound(--ibound); cliques.clear(); mbMem=mb.simulateMemory(&cliques,cond, mbCutoff, &isExact);
     if (mbMem < mbCutoff) { _gbp.clearRegions(); _gbp.addRegions(cliques); mem=_gbp.memory(); }
   }
   //ofstream ofs("cliques.mbe.txt");
   //for (size_t c=0;c<cliques.size();++c) ofs<<cliques[c]<<"\n"; writeLog("\n";  // output for DEBUG !!!
   //ofs.close();
-  writeLog("MBE iBound "<<ibound<<" = "<<mem<<"M");
+  std::stringstream ss("MBE iBound ");
+  ss <<ibound<<" = "<<mem<<"M";
+  writeLog(ss.str());
   return isExact;
 }
 
   void BpInterface::writeLog(std::string logMsg){
-  	ofstream out(logFileName);
-  	if(ofstream.is_open()){
-  		out.write(logMsg.c_string(), logMsg.length()); 	
+    ofstream out(logFileName.c_str());
+  	if(out.is_open()){
+  		out.write(logMsg.c_str(), logMsg.length()); 	
 		out << std::endl;
   	} else {
-  	std::cout << "Failed writing to log file" );
+	  std::cout << "Failed writing to log file"<<std::endl ;
   	}
   	out.close();
   }
 
  void BpInterface::writeLog(std::stringstream logMsg){
-  	ofstream out(logFileName);
-  	if(ofstream.is_open()){
+   ofstream out(logFileName.c_str());
+  	if(out.is_open()){
 	  out << logMsg << std::endl; 	
   	} else {
-  	std::cout << "Failed writing to log file" );
+	  std::cout << "Failed writing to log file"<<std::endl ;
   	}
   	out.close();
 
