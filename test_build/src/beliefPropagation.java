@@ -20,7 +20,7 @@ class bp_interface{
     
     static{
 	System.out.println("loading library");
-        System.loadLibrary("BP");
+       System.loadLibrary("BP");
     }
 
 }

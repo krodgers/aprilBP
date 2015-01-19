@@ -33,5 +33,5 @@ Factor.o: $(SRCDIR)Factor.cpp
 
 
 clean:
-	\rm *.o *~ uai_14 bp_interface -f
+	\rm *.o *~ uai_14 bp_interface libBP.a libBP.so -f 
 

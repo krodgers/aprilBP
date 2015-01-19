@@ -6,7 +6,7 @@
 #include <string>
 #include <list>
 
-#include "boost/program_options.hpp"
+//#include "boost/program_options.hpp"
 
 #include "enum.h"
 #include "vector.h"
@@ -34,7 +34,7 @@ using mex::gbp;
  *      Author: kathryn rodgers
  */
 
-namespace po = boost::program_options;
+//namespace po = boost::program_options;
 
 
 namespace lgbp {
@@ -74,7 +74,7 @@ namespace lgbp {
     //BpInterface();
 	
    
-    bool initialize(int argc, char** argv); // Initialize the computation. Returns true on success.
+ //   bool initialize(int argc, char** argv); // Initialize the computation. Returns true on success.
     bool initialize(algOptions opts, bool useDefault, double totalTime); // Initialize with given paramters; not all paramters are required
     bool initialize(double totalTime, char* task, char* problemFile, char* orderFile, char* evidenceFile, bool verbose);
  
@@ -93,7 +93,6 @@ namespace lgbp {
     //
     MEX_ENUM(Phase ,  LBP, GBP, ITERCOND, DONE );
 
-    int task; // which task we're doing
     int phase; // track which part of the inference we're doing
     int flag; // track if inference has been told to stop
     mex::vector<Factor>* bel; // stores results for MAR
@@ -106,7 +105,8 @@ namespace lgbp {
     double totalAvailableTime; // the amount of time available for inference
     bool isExact; // true when we've gotten an exact solution
     double dt;
-	
+    std::string  logFileName;
+
     algOptions options;
     
     //
@@ -116,7 +116,7 @@ namespace lgbp {
     bool doLoopyBP();    // Does Loopy BP on factGraph
     bool doGeneralBP();    // Does General BP on factGraph
     bool doIterativeConditioning();
-    bool parseCommandOptions(int argc, char** argv);    // Puts command line options in vm
+   // bool parseCommandOptions(int argc, char** argv);    // Puts command line options in vm
     double  computeVariableOrder(int numTries, double timeLimit);
     bool fitsMBE(const graphModel& gm, const mex::VarOrder& order, const VarSet* cond);
     double solveMBE(const graphModel& gm, const mex::VarOrder& order);
@@ -125,9 +125,9 @@ namespace lgbp {
     bool readEvidenceFile();
     bool readUaiFile();
     void printFactors(mex::vector<mex::Factor> *flist);
-    
+    void writeLog(std::string logMsg); // writes logMsg to logfile
+    void writeLog(std::stringstream logMsg);
   };
-
 }  // namespace lgbp
 
 #endif /* BPINTERFACE_H_ */

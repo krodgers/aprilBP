@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "BpInterface.h"
+#include "BPinterface.h"
 #include <fstream>
 #include <iostream>
 
@@ -41,11 +41,12 @@ int main(int argc, char** argv){
   printf("Starting...\n");
   BpInterface bpi;
   printf("Initializing\n");
-  char t[] = "PR";
-  char prob[] = {"../data/test.uai"};
-  char order[] = {"../data/eliminationOrder"};
-  //  bool success = bpi.initialize(1800, t, prob, order, NULL, true);
-  bool success = bpi.initialize(argc, argv);
+  //char t[] = "PR";
+  char t[] = "MAR";
+char prob[] = {"/home/krodgers/Documents/Research/aprilBP/data/test.uai"};
+  char order[] = {"/home/krodgers/Documents/Research/aprilBP/data/data/eliminationOrder"};
+    bool success = bpi.initialize(1800, t, prob, order, NULL, true);
+  // bool success = bpi.initialize(argc, argv);
 
  //free(params);
   if(!success){
