@@ -547,7 +547,8 @@ int main(int argc, char* argv[])
 	  if (vm.count("ijgp")) _gbp.setMinimal(true); else _gbp.setMinimal(false);  // use "ijgp-like" regions?
 	  isExact = gbpPopulateCliques(_gbp,order,ibound,&cond);
 	  _gbp.setProperties("Schedule=Fixed");
-	  _gbp.setStopIter(gbpIter); _gbp.setStopObj(gbpObj); _gbp.setStopMsg(-1.0);
+	  _gbp.setStopIter(gbpIter); _gbp.setStopObj(gbpObj); 
+	  _gbp.setStopMsg(-1.0);
 	  _gbp.setStopTime(gbpTime); _gbp.setVerbose(doVerbose);
 	  _gbp.init();
 

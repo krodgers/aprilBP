@@ -181,6 +181,14 @@ bool BpInterface::initialize(double totalTime, char* task, char* problemFile, ch
   logZ = 0;
   flag = Phase::LBP;
   logFileName =    "bp_logfile.txt";
+  // Make sure the logfile can be opened
+  ofstream out(logFileName.c_str());
+  if(!out.is_open()){
+    std::cout << "Failed to open log file\n";
+    return false;
+  }
+  out << "Log" << std::endl;
+  out.close();
 
 
   return true;
@@ -234,7 +242,7 @@ bool BpInterface::runInference()
 /*
   returns the solution
 
-  Puts the solution in the given argument
+  Puts the solution in the given argument and writes to file
   returns true if the solution is successfully given
 */
 bool BpInterface::getSolution(mex::vector<Factor> &MAR){
@@ -244,9 +252,8 @@ bool BpInterface::getSolution(mex::vector<Factor> &MAR){
     return false;
   }
   if(MAR.size() != bel->size()){
-    if(options.doVerbose)
-      printf("Failed to get solution -- MAR input param wrong size");
-    return false;
+    MAR.resize(bel->size());
+
   }
 
   mex::vector<Factor>::iterator MARiter;
@@ -254,22 +261,14 @@ bool BpInterface::getSolution(mex::vector<Factor> &MAR){
 
   // ToDO:: FIX THIS --> write out the right thing
   //void writeMAR(const char* outfile, mex::vector<Factor>& fs) {
-  // ofstream os(outfile);
-  // //os<<"MAR\n1\n";		// !!! 2011 PIC version: need "1" evidence
-  // os<<"MAR\n";
-  // os<<fs.size()<<" ";
-  // for (size_t f=0;f<fs.size();++f) {
-  //   os<<fs[f].nrStates()<<" ";
-  //   for (size_t i=0;i<fs[f].nrStates();++i) os<<fs[f][i]<<" ";
-  // }
-  // os<<"\n";
-  // os.close();
-  // writeLog("Wrote MAR");
-
-
+ 
+  // copy marginals to argument vector
   for(MARiter = MAR.begin(), belIter = bel->begin(); MARiter != MAR.end(); MARiter++, belIter++){
     *MARiter = *belIter;
   }
+
+  // Write MAR to file
+  writeMAR("MAR_Sltn.txt", *bel);
 
   return true;
   
@@ -279,6 +278,7 @@ bool BpInterface::getSolution(mex::vector<Factor> &MAR){
   returns the solution
 
   Puts the solution in the given argument
+  Writes answer to file
   returns true if the solution is successfully given
 */
 bool BpInterface::getSolution(double  &PR)
@@ -289,9 +289,34 @@ bool BpInterface::getSolution(double  &PR)
     return false;
   }
 
+  writePR("PR_Sltn.txt", logZ);
   PR = logZ;
   return true;
 }
+
+// Writes PR to file
+void BpInterface::writePR(const char* outfile, double logZ) {
+  ofstream os(outfile);
+  //os.precision(8); os.setf(ios::fixed,ios::floatfield);
+  //os<<"PR\n1\n"<<logZ/c_log10<<"\n";		// !!! 2011 PIC version: need "1" evidence
+  os<<"PR\n"<<logZ/c_log10<<"\n";
+  os.close();
+  writeLog("Wrote PR");
+}
+// Writes MAR to file
+void BpInterface::writeMAR(const char* outfile, mex::vector<Factor>& fs) {
+  ofstream os(outfile);
+  os<<"MAR\n";
+  os<<fs.size()<<" ";
+  for (size_t f=0;f<fs.size();++f) {
+    os<<fs[f].nrStates()<<" ";
+    for (size_t i=0;i<fs[f].nrStates();++i) os<<fs[f][i]<<" ";
+  }
+  os<<"\n";
+  os.close();
+  writeLog("Wrote MAR");
+}
+
 
 /*
   Prints out the factors given in flist

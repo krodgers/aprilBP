@@ -129,6 +129,9 @@ namespace lgbp {
     void printFactors(mex::vector<mex::Factor> *flist);
     void writeLog(std::string logMsg); // writes logMsg to logfile
     void writeLog(std::stringstream logMsg);
+    void writePR(const char* outfile, double logZ);
+    void writeMAR(const char* outfile, mex::vector<Factor>& fs);
+
   };
 }  // namespace lgbp
 
