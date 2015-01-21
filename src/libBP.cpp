@@ -11,7 +11,7 @@
  * Signature: (Ljava/lang/String;)Z
  */
 JNIEXPORT jboolean JNICALL Java_bp_1interface_doBP (JNIEnv * env, jobject job, jstring fileName){
-printf("doBP\n");
+printf("\n\ndoBP\n");
 const char *str= env->GetStringUTFChars(fileName, NULL);
 int len = env->GetStringLength(fileName);
 
@@ -20,13 +20,14 @@ for(int i=0; i < len; i++){
 file[i] = str[i];
 }
 
-  printf("The string is %s", file);
+  printf("The string is %s\n\n", file);
 
 lgbp::BpInterface* alg = new lgbp::BpInterface();
  
-char task[] = {'P','R'};
+ char task[] = "PR";
+ printf("Initializing\n");
   alg->initialize(60, task, file, NULL, NULL, true);
-  alg->runInference();
+  //alg->runInference();
  
 
   //need to release this string when done with it in

@@ -214,6 +214,9 @@ bool BpInterface::runInference()
     if(!doLoopyBP()) return false;
     phase = Phase::GBP;
     
+    //////// DELETE ME ////////
+    printf("Do Loopy BP Done\n\n");
+    ///////////////////////
   case Phase::GBP:
     if(flag == Phase::DONE || isExact)
       return true;
@@ -902,7 +905,7 @@ bool BpInterface::gbpPopulateCliques(mex::gbp& _gbp, const mex::VarOrder& order,
 }
 
   void BpInterface::writeLog(std::string logMsg){
-    ofstream out(logFileName.c_str());
+    ofstream out(logFileName.c_str(), std::ofstream::app);
   	if(out.is_open()){
   		out.write(logMsg.c_str(), logMsg.length()); 	
 		out << std::endl;
@@ -913,7 +916,7 @@ bool BpInterface::gbpPopulateCliques(mex::gbp& _gbp, const mex::VarOrder& order,
   }
 
  void BpInterface::writeLog(std::stringstream logMsg){
-   ofstream out(logFileName.c_str());
+   ofstream out(logFileName.c_str(), std::ofstream::app);
   	if(out.is_open()){
 	  out << logMsg << std::endl; 	
   	} else {
