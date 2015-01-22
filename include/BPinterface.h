@@ -63,7 +63,7 @@ namespace lgbp {
   class BpInterface {
 
   protected:
-
+    
   public:
     //
     // Fields

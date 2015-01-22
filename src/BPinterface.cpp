@@ -15,8 +15,11 @@
 #include <iostream>
 #include <fstream>
 
+#include "std_redirect.h"
+
 using namespace std;
 using namespace lgbp;
+extern std::stringstream buffer;
 //
 // public Functions
 //
@@ -111,6 +114,15 @@ bool BpInterface::initialize(algOptions opts, bool useDefault, double totalTime)
   
 // Initialize using default parameters
 bool BpInterface::initialize(double totalTime, char* task, char* problemFile, char* orderFile, char* evidenceFile, bool verbose){
+  // Make sure the logfile can be opened
+  logFileName =    "bp_logfile.txt";
+  ofstream out(logFileName.c_str());
+  if(!out.is_open()){
+    std::cout << "Failed to open log file\n";
+    return false;
+  }
+  out << "Log" << std::endl;
+  out.close();
   options = algOptions();
   if ( problemFile == NULL) {
     if(verbose)
@@ -180,15 +192,6 @@ bool BpInterface::initialize(double totalTime, char* task, char* problemFile, ch
   phase = Phase::LBP;
   logZ = 0;
   flag = Phase::LBP;
-  logFileName =    "bp_logfile.txt";
-  // Make sure the logfile can be opened
-  ofstream out(logFileName.c_str());
-  if(!out.is_open()){
-    std::cout << "Failed to open log file\n";
-    return false;
-  }
-  out << "Log" << std::endl;
-  out.close();
 
 
   return true;
@@ -542,6 +545,12 @@ bool BpInterface::doLoopyBP() {
   //////////////////////////////////////////
     
     _lbp.run();
+    
+    //// TRY THIS /////
+    writeLog(buffer);
+    
+    /////////////
+
     switch (options.task) {
     case Task::PR:
       logZ = _lbp.logZ() / c_log10; 
@@ -605,7 +614,8 @@ bool BpInterface::doGeneralBP() {
       _gbp.setStopIter(options.gbpIter); 
       //_gbp.setStopObj(options.gbpObj); _gbp.setStopMsg(-1.0); 
       _gbp.setStopObj(-1); _gbp.setStopMsg(-1.0); 
-      _gbp.setVerbose(options.doVerbose);
+      //      _gbp.setVerbose(options.doVerbose);
+      _gbp.setVerbose(false); // don't want stuff on std::out
       if (isExact) _gbp.setDamping(-1.0);  // no damping if we think it's exact
       // Get region indices for single-variable beliefs
       mex::vector<mex::gbp::findex> regions(nvar);

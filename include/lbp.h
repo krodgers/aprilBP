@@ -16,6 +16,8 @@
 #include "alg.h"
 #include "indexedHeap.h"
 
+//#include "std_redirect.h"
+
 /*
 */
 
@@ -190,7 +192,8 @@ public:
 
       _iter++;
     }
-    std::cout<<"LBP: "<<_iter/nFactors()<<"it, "<<timeSystem()-startTime<<"sec\n";
+    
+        std::cout<<"LBP: "<<_iter/nFactors()<<"it, "<<timeSystem()-startTime<<"sec\n";
   }
 
   void reparameterize() {

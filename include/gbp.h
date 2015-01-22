@@ -17,6 +17,8 @@
 #include "alg.h"
 #include "indexedHeap.h"
 
+//#include "std_redirect.h"
+
 /*
  */
 
@@ -486,7 +488,8 @@ namespace mex {
 	    std::random_shuffle( _rorder.begin(), _rorder.end() ); 	// Random shuffle update to avoid pathology
 	    n=0;  																									// and start back at the beginning of the order
 	  }
-	  std::cout<<"end iter "<<iter()-1<<"; "<<_lnZ<<" ("<<dObj()<<") ; "<<_lnZStable<<" ("<<_dObjStable<<")\n";
+	  if(_verbose)
+	    std::cout<<"end iter "<<iter()-1<<"; "<<_lnZ<<" ("<<dObj()<<") ; "<<_lnZStable<<" ("<<_dObjStable<<")\n";
 #ifdef DEBUG  
 	  std::ofstream ofs; ofs.open("updates.gbp.txt", std::ofstream::out | std::ofstream::app);
 	  ofs<<"\n\n=== END ITER "<<iter()-1<<"; "<<_lnZ<<" ("<<dObj()<<") ; "<<_lnZStable<<" ("<<_dObjStable<<")\n\n";
@@ -497,7 +500,8 @@ namespace mex {
       
 	if (_lnZ == -infty()) { _dObj=0.0; break; }
       }
-      if (_verbose) std::cout<<"GBP: "<<iter()<<"it, "<<timeSystem()-startTime<<"sec\n";
+      if (_verbose) 
+	std::cout<<"GBP: "<<iter()<<"it, "<<timeSystem()-startTime<<"sec\n";
 
       //os.close();
     }
