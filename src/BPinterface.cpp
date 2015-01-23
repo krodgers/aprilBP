@@ -19,7 +19,7 @@
 
 using namespace std;
 using namespace lgbp;
-extern std::stringstream buffer;
+#define LOGFILE
 //
 // public Functions
 //
@@ -226,7 +226,7 @@ bool BpInterface::runInference()
     phase = Phase::GBP;
     
     //////// DELETE ME ////////
-    printf("Do Loopy BP Done\n\n");
+    //printf("Do Loopy BP Done\n\n");
     ///////////////////////
   case Phase::GBP:
     if(flag == Phase::DONE || isExact)
@@ -251,7 +251,7 @@ bool BpInterface::runInference()
 bool BpInterface::getSolution(mex::vector<Factor> &MAR){
   if(options.task == Task::PR){
     if(options.doVerbose)
-      printf("Failed to get solution -- wrong task");
+      std::cout << "Failed to get solution -- wrong task";
     return false;
   }
   if(MAR.size() != bel->size()){
@@ -547,7 +547,7 @@ bool BpInterface::doLoopyBP() {
     _lbp.run();
     
     //// TRY THIS /////
-    writeLog(buffer);
+    //writeLog(buffer);
     
     /////////////
 
@@ -614,8 +614,8 @@ bool BpInterface::doGeneralBP() {
       _gbp.setStopIter(options.gbpIter); 
       //_gbp.setStopObj(options.gbpObj); _gbp.setStopMsg(-1.0); 
       _gbp.setStopObj(-1); _gbp.setStopMsg(-1.0); 
-      //      _gbp.setVerbose(options.doVerbose);
-      _gbp.setVerbose(false); // don't want stuff on std::out
+      _gbp.setVerbose(options.doVerbose);
+      //_gbp.setVerbose(false); // don't want stuff on std::out
       if (isExact) _gbp.setDamping(-1.0);  // no damping if we think it's exact
       // Get region indices for single-variable beliefs
       mex::vector<mex::gbp::findex> regions(nvar);

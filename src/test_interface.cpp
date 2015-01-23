@@ -12,6 +12,8 @@
 using namespace std;
 using lgbp::BpInterface;
 
+
+
 void writePR(const char* outfile, double logZ) {
   ofstream os(outfile);
   //os.precision(8); os.setf(ios::fixed,ios::floatfield);
@@ -37,10 +39,13 @@ void writeMAR(const char* outfile, mex::vector<Factor>& fs) {
 
 int main(int argc, char** argv){
   
-  printf("Test Iterface\n");
-  printf("Starting...\n");
+  std::ofstream out("bp_logfile.txt", std::ofstream::app | std::ofstream::out);
+  std::streambuf *restoreSTDCOUT = std::cout.rdbuf();
+  std::cout.rdbuf(out.rdbuf());
+  //printf("Test Iterface\n");
+  //printf("Starting...\n");
   BpInterface bpi;
-  printf("Initializing\n");
+  //printf("Initializing\n");
   //char t[] = "PR";
   char t[] = "MAR";
 char prob[] = {"/home/krodgers/Documents/Research/aprilBP/data/test.uai"};
@@ -50,26 +55,26 @@ char prob[] = {"/home/krodgers/Documents/Research/aprilBP/data/test.uai"};
 
  //free(params);
   if(!success){
-    printf("Failed Initializing\n");
+    //printf("Failed Initializing\n");
     return 0;
   }
   
-  printf("Analyzing\n");
+  //printf("Analyzing\n");
   int time, memory;
   bpi.estimateComplexity(time, memory);
-  printf("Estimated %d time and %d memory\n", time, memory);
+  //printf("Estimated %d time and %d memory\n", time, memory);
 
-  printf("Beginning Inference\n");
+  //printf("Beginning Inference\n");
   bpi.runInference();
-  printf("Getting solution\n");
+  //printf("Getting solution\n");
   double ans;
   mex::vector<Factor> MarSltn(9);
   bpi.getSolution(MarSltn);
   //  bpi.getSolution(ans);
-  //  printf("Solution returned:%g \n",ans);
+  //  //printf("Solution returned:%g \n",ans);
   // std::cout<<ans<<"\n";
   writeMAR("../results/Interface_MAR", MarSltn);
-  printf("Quitting\n");
+  //printf("Quitting\n");
   return 0;
 }
 
