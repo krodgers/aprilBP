@@ -5,6 +5,8 @@
 #ifdef WINDOWS
 
 #include <Windows.h>
+#undef max // windef #defines max and it breaks things
+#undef min // windef #defines min and it breaks things
 #else
 #include<sys/time.h>
 #endif

@@ -545,11 +545,6 @@ bool BpInterface::doLoopyBP() {
   //////////////////////////////////////////
     
     _lbp.run();
-    
-    //// TRY THIS /////
-    writeLog(buffer);
-    
-    /////////////
 
     switch (options.task) {
     case Task::PR:
