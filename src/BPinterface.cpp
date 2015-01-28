@@ -11,15 +11,14 @@
 #include <cstring>
 #include <cstdio>
 #include <sstream>
- #include <stdio.h>
+#include <stdio.h>
 #include <iostream>
 #include <fstream>
 
-#include "std_redirect.h"
 
 //using namespace std;
 using namespace lgbp;
-extern std::stringstream buffer;
+//#define LOGFILE
 //
 // public Functions
 //
@@ -112,8 +111,28 @@ bool BpInterface::initialize(algOptions opts, bool useDefault, double totalTime)
 //    
 //}
   
+BpInterface::BpInterface(){
+ #ifdef LOGFILE
+  out = new std::ofstream("bp_logfile.txt");
+  //  out->open("bp_logfile.txt");
+  std::streambuf *temp = std::cout.rdbuf();
+  restoreSTDCOUT = temp;
+  std::cout.rdbuf(out->rdbuf());
+#endif
+
+}
+BpInterface::~BpInterface(){
+#ifdef LOGFILE
+ 
+  std::cout.rdbuf(restoreSTDCOUT);
+  //out->close();
+#endif
+
+}
 // Initialize using default parameters
 bool BpInterface::initialize(double totalTime, char* task, char* problemFile, char* orderFile, char* evidenceFile, bool verbose){
+
+   std::cout << "TESTING" << std::endl;
   // Make sure the logfile can be opened
   logFileName =    "bp_logfile.txt";
   ofstream out(logFileName.c_str());
@@ -226,7 +245,7 @@ bool BpInterface::runInference()
     phase = Phase::GBP;
     
     //////// DELETE ME ////////
-    printf("Do Loopy BP Done\n\n");
+    //printf("Do Loopy BP Done\n\n");
     ///////////////////////
   case Phase::GBP:
     if(flag == Phase::DONE || isExact)
@@ -251,7 +270,7 @@ bool BpInterface::runInference()
 bool BpInterface::getSolution(mex::vector<Factor> &MAR){
   if(options.task == Task::PR){
     if(options.doVerbose)
-      printf("Failed to get solution -- wrong task");
+      std::cout << "Failed to get solution -- wrong task";
     return false;
   }
   if(MAR.size() != bel->size()){
@@ -273,6 +292,9 @@ bool BpInterface::getSolution(mex::vector<Factor> &MAR){
   // Write MAR to file
   writeMAR("MAR_Sltn.txt", *bel);
 
+  ///// DELETE ME ///////
+  printf("Made it through getSolution\n");
+  //////////////////
   return true;
   
 }
@@ -302,7 +324,7 @@ void BpInterface::writePR(const char* outfile, double logZ) {
   ofstream os(outfile);
   //os.precision(8); os.setf(ios::fixed,ios::floatfield);
   //os<<"PR\n1\n"<<logZ/c_log10<<"\n";		// !!! 2011 PIC version: need "1" evidence
-  os<<"PR\n"<<logZ/c_log10<<"\n";
+  os<<"PR\n"<<logZ<<"\n";
   os.close();
   writeLog("Wrote PR");
 }
@@ -521,9 +543,15 @@ bool BpInterface::doLoopyBP() {
 
   //////// DELETE ME ///////
   //  options.lbpTime = 5000000;
+  writeLog("Entering doLoopyBP()");
+  std::cout << "Facts size: " << facts->size() << std::endl;
   ////////////////////////
 
   mex::graphModel fg(*facts);
+  //////// DELETE ME ///////
+  //  options.lbpTime = 5000000;
+  writeLog("Initialized graphModel");
+  ////////////////////////
 
   mex::lbp _lbp(*facts); 
   std::stringstream ss("Model has ");
@@ -538,14 +566,13 @@ bool BpInterface::doLoopyBP() {
     _lbp.setStopTime(options.lbpTime);
     _lbp.init();
   ///////////////////// DELETE ME ////////////////////////
-  printf("Beginning Loopy BP\n");
+    //  printf("Beginning Loopy BP\n");
   // printf("BP factors:\n");
   // mex::vector<Factor> temp = _lbp.beliefs();
   // printFactors(&temp);
   //////////////////////////////////////////
     
     _lbp.run();
-
     switch (options.task) {
     case Task::PR:
       logZ = _lbp.logZ() / c_log10; 
@@ -609,8 +636,8 @@ bool BpInterface::doGeneralBP() {
       _gbp.setStopIter(options.gbpIter); 
       //_gbp.setStopObj(options.gbpObj); _gbp.setStopMsg(-1.0); 
       _gbp.setStopObj(-1); _gbp.setStopMsg(-1.0); 
-      //      _gbp.setVerbose(options.doVerbose);
-      _gbp.setVerbose(false); // don't want stuff on std::out
+      _gbp.setVerbose(options.doVerbose);
+      //_gbp.setVerbose(false); // don't want stuff on std::out
       if (isExact) _gbp.setDamping(-1.0);  // no damping if we think it's exact
       // Get region indices for single-variable beliefs
       mex::vector<mex::gbp::findex> regions(nvar);
@@ -673,7 +700,7 @@ bool BpInterface::doIterativeConditioning(){
 
 
   ///////////// DELETE ME /////////////////////////////////
-  printf("Iterative Conditioning and GBP\n");
+  //printf("Iterative Conditioning and GBP\n");
 
   //////////////////////////////////////////
   isExact = false;
@@ -909,7 +936,7 @@ bool BpInterface::tryExactPR(const graphModel& gm, const mex::VarOrder& order) {
 
 bool BpInterface::gbpPopulateCliques(mex::gbp& _gbp, const mex::VarOrder& order, size_t& ibound, VarSet* cond) {
   ///////////////////// DELETE ME ////////////////////
-  printf("gbpPopulateCliques\n");
+  //printf("gbpPopulateCliques\n");
   ///////////////////////////////////////
   bool isExact = false;
   double mbCutoff = options.MemLimit/sizeof(double)*1024*1024;     // translate memory into MBE cutoff

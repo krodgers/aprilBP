@@ -3,6 +3,7 @@
 
 #define GBP_USE_LOG
 
+
 #include <assert.h>
 #include <stdexcept>
 #include <stdlib.h>
@@ -17,7 +18,6 @@
 #include "alg.h"
 #include "indexedHeap.h"
 
-//#include "std_redirect.h"
 
 /*
  */
@@ -298,6 +298,13 @@ namespace mex {
 
 
     void init() {
+#ifdef LOGFILE
+      std::ofstream out("bp_logfile.txt", std::ofstream::app | std::ofstream::out);
+      std::streambuf *restoreSTDCOUT = std::cout.rdbuf();
+      std::cout.rdbuf(out.rdbuf());
+      
+#endif
+
       _iter = 0;
       _dObjCurr = _dObj = infty();
 
@@ -398,7 +405,13 @@ namespace mex {
       _dObjStable = infty();
       _lnZStable = 0.0;
       _lnZStable = _lnZ;    // !!!! from "initial" updates
-      if (_verbose) std::cout<<"GBP init(): "<<_lnZ<<"\n";
+      if (_verbose) 
+	std::cout<<"GBP init(): "<<_lnZ<<"\n";
+#ifdef LOGFILE
+      std::cout.rdbuf(restoreSTDCOUT);
+      
+#endif
+
 #ifdef DEBUG  
       std::ofstream ofs; 
       ofs.open("updates.gbp.txt", std::ofstream::out | std::ofstream::app);
@@ -417,6 +430,13 @@ namespace mex {
 
     /// Run the algorithm until one of the stopping criteria is reached
     virtual void run() {
+#ifdef LOGFILE
+      std::ofstream out("bp_logfile.txt", std::ofstream::app | std::ofstream::out);
+      std::streambuf *restoreSTDCOUT = std::cout.rdbuf();
+      std::cout.rdbuf(out.rdbuf());
+      
+#endif
+      
       double startTime = timeSystem();
       double print=startTime+1;
       size_t stopIter = _stopIter * _rg.maximalRegions().size();
@@ -504,6 +524,11 @@ namespace mex {
 	std::cout<<"GBP: "<<iter()<<"it, "<<timeSystem()-startTime<<"sec\n";
 
       //os.close();
+#ifdef LOGFILE
+      std::cout.rdbuf(restoreSTDCOUT);
+      
+#endif
+
     }
 
 

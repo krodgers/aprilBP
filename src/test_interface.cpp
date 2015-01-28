@@ -12,28 +12,8 @@
 using namespace std;
 using lgbp::BpInterface;
 
-void writePR(const char* outfile, double logZ) {
-  ofstream os(outfile);
-  //os.precision(8); os.setf(ios::fixed,ios::floatfield);
-  //os<<"PR\n1\n"<<logZ/c_log10<<"\n";		// !!! 2011 PIC version: need "1" evidence
-  os<<"PR\n"<<logZ/c_log10<<"\n";
-  os.close();
-  std::cout<<"Wrote PR : "<<logZ/c_log10<<"\n";
-}
 
-void writeMAR(const char* outfile, mex::vector<Factor>& fs) {
-  ofstream os(outfile);
-  //os<<"MAR\n1\n";		// !!! 2011 PIC version: need "1" evidence
-  os<<"MAR\n";
-  os<<fs.size()<<" ";
-  for (size_t f=0;f<fs.size();++f) {
-    os<<fs[f].nrStates()<<" ";
-    for (size_t i=0;i<fs[f].nrStates();++i) os<<fs[f][i]<<" ";
-  }
-  os<<"\n";
-  os.close();
-  std::cout<<"Wrote MAR\n";
-}
+
 
 int main(int argc, char** argv){
   
@@ -41,12 +21,20 @@ int main(int argc, char** argv){
   printf("Starting...\n");
   BpInterface bpi;
   printf("Initializing\n");
-  //char t[] = "PR";
-  char t[] = "MAR";
-  #ifdef WINDOWS
+
+
+  #ifdef MAR
+ char t[] = "MAR";
+  
+ #else
+ char t[] = "PR";
+  
+ #endif
+
+ #ifdef WINDOWS
 char prob[] = {"C:\\Users\\Kathryn\\Google Drive\\AprilAlex\\april_alex\\data\\test.uai"};
-  char order[] = {"C:\\Users\\Kathryn\\Google Drive\\AprilAlex\\april_alex\\data\\eliminationOrder"};
-    bool success = bpi.initialize(1800, t, prob, order, NULL, true);
+char order[] = {"C:\\Users\\Kathryn\\Google Drive\\AprilAlex\\april_alex\\data\\eliminationOrder"};
+bool success = bpi.initialize(1800, t, prob, order, NULL, true);
   
   #else 
 char prob[] = {"/home/krodgers/Documents/Research/aprilBP/data/test.uai"};
@@ -56,10 +44,10 @@ char prob[] = {"/home/krodgers/Documents/Research/aprilBP/data/test.uai"};
     #endif
   // bool success = bpi.initialize(argc, argv);
 
- //free(params);
+ 
   if(!success){
     printf("Failed Initializing\n");
-    return 0;
+ 	return 0;
   }
   
   printf("Analyzing\n");
@@ -70,14 +58,26 @@ char prob[] = {"/home/krodgers/Documents/Research/aprilBP/data/test.uai"};
   printf("Beginning Inference\n");
   bpi.runInference();
   printf("Getting solution\n");
-  double ans;
+
+  #ifdef MAR
   mex::vector<Factor> MarSltn(9);
-  bpi.getSolution(MarSltn);
-  //  bpi.getSolution(ans);
-  //  printf("Solution returned:%g \n",ans);
-  // std::cout<<ans<<"\n";
-  writeMAR("../results/Interface_MAR", MarSltn);
+  bool res = bpi.getSolution(MarSltn); // gets solution and writes to file
+  #else
+  double ans;
+  bool res = bpi.getSolution(ans);
+  #endif
+
+  /// DELETE ME ////
+  printf("Returned from get solution\n");
+  //////////////////
+  
+  printf("Solution returned:%g \n",ans);
   printf("Quitting\n");
+
+  // int dummyVar;
+  //std::cin >> dummyVar;
+  if(!res)
+    printf("Failed getting solution\n");
   return 0;
 }
 
