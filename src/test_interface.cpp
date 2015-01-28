@@ -43,9 +43,17 @@ int main(int argc, char** argv){
   printf("Initializing\n");
   //char t[] = "PR";
   char t[] = "MAR";
+  #ifdef WINDOWS
+char prob[] = {"C:\\Users\\Kathryn\\Google Drive\\AprilAlex\\april_alex\\data\\test.uai"};
+  char order[] = {"C:\\Users\\Kathryn\\Google Drive\\AprilAlex\\april_alex\\data\\eliminationOrder"};
+    bool success = bpi.initialize(1800, t, prob, order, NULL, true);
+  
+  #else 
 char prob[] = {"/home/krodgers/Documents/Research/aprilBP/data/test.uai"};
   char order[] = {"/home/krodgers/Documents/Research/aprilBP/data/data/eliminationOrder"};
     bool success = bpi.initialize(1800, t, prob, order, NULL, true);
+    
+    #endif
   // bool success = bpi.initialize(argc, argv);
 
  //free(params);

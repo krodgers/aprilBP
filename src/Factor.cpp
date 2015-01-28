@@ -12,7 +12,7 @@
 #include <iostream>
 
 
-#define strcasecmp _stricmp
+//#define strcasecmp _stricmp
 #endif
 
 //#include <assert>

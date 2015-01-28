@@ -17,7 +17,7 @@
 
 #include "std_redirect.h"
 
-using namespace std;
+//using namespace std;
 using namespace lgbp;
 extern std::stringstream buffer;
 //
@@ -721,10 +721,17 @@ bool BpInterface::doIterativeConditioning(){
 	      mex::graphModel gm(fcond);
 	      lnZ[i] = solveMBE(gm,order);
 	      std::stringstream ss("");
-	      for (size_t v=0;v<cond.size();++v) 
-		ss << cond[v] << "=" << val[cond[v]] <<" ";
-	      writeLog(ss.str());
-	      ss.str(""); ss << lnZ[i];
+		  for (size_t v = 0; v < cond.size(); ++v){
+//			  mex::operator<<(std::cout, cond[v]);
+			  std::cout << ((mex::Var)(cond[v]));
+			  std::cout << "=" << val[cond[v]];
+			  std::cout << " " << std::endl;
+		  }
+
+		  
+		  
+	      
+		  ss.str(""); ss << lnZ[i];
 	      writeLog(ss.str());
 
 	      continue;
