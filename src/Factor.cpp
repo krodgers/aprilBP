@@ -8,8 +8,11 @@
 
 
 #ifdef WINDOWS
-#include "stdafx.h"
+//#include "stdafx.h"
 #include <iostream>
+
+
+#define strcasecmp _stricmp
 #endif
 
 //#include <assert>
@@ -100,6 +103,7 @@ vector<Factor> Factor::readUai10(std::istream& is) {
   size_t nvar, ncliques, csize, v, nval;
   char* st; st = new char[20];
   is >> st;
+ 
   if ( strcasecmp(st,"MARKOV") ) 
     throw std::runtime_error("Only UAI-2010 Markov-format files are supported currently");
 

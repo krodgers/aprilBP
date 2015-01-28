@@ -7,11 +7,14 @@
 
 //#define USING_BUCKET_ELIMINATION
 //#define USING_DAOOPT
+#define USING_BP
 
+#ifndef USING_BP
 #include "Utils\MiscUtils.hxx"
 #include "Utils\Mutex.h"
 #include "Problem\Problem.hxx"
 #include "CVO\VariableOrderComputation.hxx"
+#endif
 
 #if defined USING_BUCKET_ELIMINATION
 #include <BE\Bucket.hxx>

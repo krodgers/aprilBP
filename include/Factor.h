@@ -45,7 +45,7 @@ class Factor : public virtual mxObject {
 
   // Constructors //////////////////////////////////////////////////////////////////////////
 
-  Factor(Factor const& f) : v_(f.v_), t_(f.t_) {
+ Factor(Factor const& f) : v_(f.v_), t_(f.t_) {
 #ifdef __FACTOR_H_MEMORY
     memused += t_.capacity()*sizeof(double);
     mmax = std::max(mmax,memused);
@@ -340,7 +340,9 @@ class Factor : public virtual mxObject {
   }
 */
 
-  Factor max(VarSet const& sumOut) const { VarSet t=v_ - sumOut; return maxmarginal(t); }
+  Factor max(VarSet const& sumOut) const { 
+	  VarSet t=v_ - sumOut; return maxmarginal(t); 
+  }
   value  max()                     const { return std::accumulate(t_.begin(),t_.end(),-infty(),myMax()); }
 
   Factor min(VarSet const& sumOut) const { VarSet t= v_ - sumOut; return minmarginal(t); }

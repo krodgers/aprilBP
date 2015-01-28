@@ -573,12 +573,6 @@ bool BpInterface::doLoopyBP() {
   //////////////////////////////////////////
     
     _lbp.run();
-    
-    //// TRY THIS /////
-    //writeLog(buffer);
-    
-    /////////////
-
     switch (options.task) {
     case Task::PR:
       logZ = _lbp.logZ() / c_log10; 

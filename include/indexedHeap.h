@@ -9,6 +9,10 @@
 #include "mex.h"
 #endif
 
+#ifdef WINDOWS
+#define uint unsigned int
+#endif
+
 namespace mex {
 
 /* Indexed Heap : a "reversible" heap from key (double) to unique values (uint, 0..N-1; some can be missing) 
