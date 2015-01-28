@@ -16,7 +16,6 @@
 #include "alg.h"
 #include "indexedHeap.h"
 
-//#include "std_redirect.h"
 
 /*
 */
@@ -138,6 +137,13 @@ public:
 
   /// Run the algorithm until one of the stopping criteria is reached
   virtual void run() {
+#ifdef LOGFILE
+    std::ofstream out("bp_logfile.txt", std::ofstream::app | std::ofstream::out);
+    std::streambuf *restoreSTDCOUT = std::cout.rdbuf();
+    std::cout.rdbuf(out.rdbuf());
+    
+#endif
+
     double startTime = timeSystem();
     double print = startTime + 1;
     double dObj=infty(), dMsg=infty();                            // initialize termination values
@@ -145,11 +151,6 @@ public:
 
     for (; dMsg>=_stopMsg && _iter<_stopIter && std::abs(dObj)>=_stopObj; ) {
       if (_stopTime > 0 && _stopTime <= (timeSystem()-startTime)){
-	//////////DELETE ME ////////////////////
-	std::cout<<"starttime: " <<  startTime << std::endl;
-	std::cout<<"_stopTime > 0: " << (_stopTime > 0) << "\n _stopTime <= (timeSystem()-startTime): " <<  (_stopTime <= (timeSystem()-startTime)) << std::endl;
-
-	///////////////////////////////
 	break;       // time-out check
       }
       size_t f;                                                   // factor index
@@ -193,8 +194,15 @@ public:
       _iter++;
     }
     
+   
         std::cout<<"LBP: "<<_iter/nFactors()<<"it, "<<timeSystem()-startTime<<"sec\n";
-  }
+#ifdef LOGFILE
+      //   std::streambuf *restoreSTDCOUT = std::cout.rdbuf();
+      std::cout.rdbuf(restoreSTDCOUT);
+      
+#endif
+  
+}
 
   void reparameterize() {
 
