@@ -9,22 +9,6 @@ extern "C" {
 #endif
 /*
  * Class:     bp_interface
- * Method:    initBpInterface
- * Signature: ()J
- */
-JNIEXPORT jlong JNICALL Java_bp_1interface_initBpInterface
-  (JNIEnv *, jobject);
-
-/*
- * Class:     bp_interface
- * Method:    destroyBpInterface
- * Signature: ()V
- */
-JNIEXPORT void JNICALL Java_bp_1interface_destroyBpInterface
-  (JNIEnv *, jobject);
-
-/*
- * Class:     bp_interface
  * Method:    doBP
  * Signature: (Ljava/lang/String;)Z
  */
