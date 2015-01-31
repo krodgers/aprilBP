@@ -124,7 +124,7 @@ BpInterface::BpInterface(){
 BpInterface::~BpInterface(){
 #ifdef LOGFILE
  
-  std::cout.rdbuf(restoreSTDCOUT);
+  //  std::cout.rdbuf(restoreSTDCOUT);
   //out->close();
 #endif
 

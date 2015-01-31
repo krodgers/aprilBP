@@ -11,7 +11,7 @@ class bp_interface{
     public native void destroyBpInterface();
 
     public bp_interface(){
-	interfacePtr = this.initBpInterface(); // create the object
+	//interfacePtr = initBpInterface(); // create the object
     }
     public void destroy(){
 	destroyBpInterface();// delete the object
@@ -21,6 +21,7 @@ class bp_interface{
 	destroyBpInterface();
 	interfacePtr = 0L;
     }
+
 
     /**
      Does inference using BP on the model described in the UAI file
@@ -35,8 +36,9 @@ class bp_interface{
     public native String getSolution();
     
     static{
-	System.out.println("loading library");
-	System.loadLibrary("BP");
+        System.out.println("loading library");
+        System.loadLibrary("BP");
+        System.out.println("Finished Loading Library");
     }
 
 }
