@@ -10,7 +10,7 @@
 JNIEXPORT jlong JNICALL Java_bp_1interface_initBpInterface (JNIEnv *env, jobject jobj){
   jfieldID fid;
   jclass cls;
-
+printf("initBpInterface");
   cls = env->GetObjectClass(jobj);
   fid = env->GetFieldID(cls, "interfacePtr", "J"); // get the pointer to the bp object
 
@@ -32,7 +32,7 @@ JNIEXPORT void JNICALL Java_bp_1interface_destroyBpInterface (JNIEnv * env , job
   jfieldID fid;
   jclass cls;
   lgbp::BpInterface* alg;
-    
+  printf("destroyBpInterfact()\n");
   cls = env->GetObjectClass(jobj);
   fid = env->GetFieldID(cls, "interfacePtr", "J"); // get the pointer to the bp object
   alg = (lgbp::BpInterface*)env->GetLongField(jobj,fid);
@@ -67,18 +67,23 @@ JNIEXPORT jboolean JNICALL Java_bp_1interface_doBP (JNIEnv * env, jobject jobj, 
   //printf("\n\n");
 
   printf("The string is %s\n\n", file);
+  printf("The string is %s\n\n", str);
 
  
-  char task[] = "PR";
+  char task[2];
+  task[0] = 'P';
+  task[1] = 'R';
   printf("Initializing\n");
   alg->initialize(60, task, file, NULL, NULL, true);
+  printf("Running inference \n");
   alg->runInference();
  
 
   //need to release this string when done with it in
   //order to avoid memory leak
   env->ReleaseStringUTFChars(fileName, str);
- 
+
+ printf("Ending doBP()\n");
   return true;
 }
 

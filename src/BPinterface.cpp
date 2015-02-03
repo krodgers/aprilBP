@@ -232,7 +232,7 @@ bool BpInterface::runInference()
 
   //TODO:: check flag before setting phase
   //TODO:: init flag
-  double startTime = timeSystem();
+  //double startTime = timeSystem();
   bool success = false;
 
   
@@ -352,7 +352,7 @@ void BpInterface::printFactors(mex::vector<Factor> *flist){
     std::cout << "(*flist)[" <<f<< "]: nvar(" <<(*flist)[f].nvar() << "), numStates("<<  (*flist)[f].nrStates()<< ")"<<endl;
     std::cout <<"(*flist)[" << f << "]: values:" ;
     const double *values = (*flist)[f].table();
-    for (int v = 0; v < (*flist)[f].nrStates(); v++){
+    for (size_t  v = 0; v < (*flist)[f].nrStates(); v++){
       std::cout <<  values[f] << " ";
     }
     std::cout << std::endl;
@@ -427,8 +427,9 @@ bool BpInterface::readEvidenceFile(){
   if (is2.is_open()) {
     writeLog("Got evidence file " + std::string(options.evidenceFile));
     std::map<uint32_t,size_t> evid;
-    int nEvidVar; is2 >> nEvidVar;
-    for (size_t i=0;i<nEvidVar;i++) {
+    size_t nEvidVar; 
+    is2 >> nEvidVar;
+    for (size_t i = 0; i < nEvidVar; i++) {
       uint32_t vid; size_t vval; is2>>vid>>vval; 
       evid[vid]=vval; evVar |= Var(vid,0);
       //xhat[vid]=vval;
@@ -510,7 +511,7 @@ double  BpInterface::computeVariableOrder(int numTries, double timeLimit){
     } else {
       // Otherwise, calculate elimination order(s) ////////////////////////////////////
       double startOrder = timeSystem();
-      size_t iOrder = 0;			
+      int iOrder = 0;			
       // Try to build new orders until time or count limit reached ////////////////////
       while (iOrder < options.nOrders && (timeSystem()-startOrder < options.timeOrder)) {
 	score = factGraph.order(mex::graphModel::OrderMethod::WtMinFill, order, options.nExtra, score);
@@ -953,7 +954,7 @@ bool BpInterface::gbpPopulateCliques(mex::gbp& _gbp, const mex::VarOrder& order,
   double mbMem = mb.simulateMemory(&cliques,cond, mbCutoff, &isExact);
   if (mbMem < mbCutoff) { _gbp.addRegions(cliques); mem = _gbp.memory(); }
   while ( ibound > 0 && (mbMem >= mbCutoff || mem > options.MemLimit) ) {
-  std:stringstream ss("MBE iBound ");
+    std::stringstream ss("MBE iBound ");
     ss <<ibound<<" = "<<mem<<"M";
     writeLog(ss.str());
     mb.setIBound(--ibound); cliques.clear(); mbMem=mb.simulateMemory(&cliques,cond, mbCutoff, &isExact);

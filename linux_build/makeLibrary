@@ -2,13 +2,16 @@
 make library_clean
 rm ../test_build/resource/libBP.so -f
 rm ../test_build/src/libBP.so -f 
-
-javac -d . ../test_build/src/beliefPropagation.java 
-javah -jni -d ../include -jni bp_interface
+echo "javac -d . ../test_build/src/beliefPropagation.java"
+javac -d . ../test_build/src/beliefPropagation.java
+echo "javah -jni -d ../include bp_interface"
+javah -jni -d ../include bp_interface
 
 # Compile .o files
-g++  -fPIC -g -D LOGFILE -I../include -I/usr/local/share/jdk1.8.0_25/include/linux  -I/usr/local/share/jdk1.8.0_25/include/   -c ../src/Factor.cpp  ../src/graphmodel.cpp  ../src/BPinterface.cpp  ../src/libBP.cpp
+echo "g++  -fPIC -g -D LOGFILE -I../include -I/usr/local/share/jdk1.8.0_25/include/linux  -I/usr/local/share/jdk1.8.0_25/include/   -c ../src/Factor.cpp  ../src/graphmodel.cpp  ../src/BPinterface.cpp  ../src/libBP.cpp"
+g++  -fPIC -g -Wall -D LOGFILE -I../include -I/usr/local/share/jdk1.8.0_25/include/linux  -I/usr/local/share/jdk1.8.0_25/include/   -c ../src/Factor.cpp  ../src/graphmodel.cpp  ../src/BPinterface.cpp  ../src/libBP.cpp
 # Compile Library
+echo "g++ -shared -g -Wl,-soname,libBP.so  *.o   -O3 -o ../test_build/src/libBP.so"
 g++ -shared -g -Wl,-soname,libBP.so  *.o   -O3 -o ../test_build/src/libBP.so
 
 

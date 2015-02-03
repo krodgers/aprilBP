@@ -288,7 +288,7 @@ protected:  // Contained objects
   /// Accept all the incoming messages into node n, and recompute its belief
   void acceptIncoming(size_t  n) {                //
     const set<EdgeID>& nbrs = neighbors(n);        // get the list of neighbors
-    double lnZn=0.0;
+    //double lnZn=0.0;
 #ifdef USE_LOG
     belief(n)=log(factor(n));                          //   and start with just the local factor
 #else
@@ -301,7 +301,7 @@ protected:  // Contained objects
 #else
       belief(n) *= _msg[i->ridx];                 //   and include it in the belief
       double Zn=belief(n).sum(); belief(n)/=Zn;   // normalize belief as we go for stability
-      lnZn+=std::log(Zn); 
+      //lnZn+=std::log(Zn); 
 #endif
       if (_sched==Schedule::Priority) 
         priority.erase(i->ridx);                  // accepted => remove from priority queue

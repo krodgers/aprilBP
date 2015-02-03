@@ -39,8 +39,10 @@ bool success = bpi.initialize(1800, t, prob, order, NULL, true);
   #else 
 char prob[] = {"/home/krodgers/Documents/Research/aprilBP/data/test.uai"};
   char order[] = {"/home/krodgers/Documents/Research/aprilBP/data/data/eliminationOrder"};
-    bool success = bpi.initialize(1800, t, prob, order, NULL, true);
-    
+
+
+  //    bool success = bpi.initialize(1800, t, prob, order, NULL, true);
+        bool success = bpi.initialize(60, t, prob, NULL, NULL, true);
     #endif
   // bool success = bpi.initialize(argc, argv);
 

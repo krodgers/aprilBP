@@ -64,7 +64,7 @@ namespace mex {
 
   public:
     /// Constructors : from nothing, copy, list of factors, or input iterators
-  gbp(const vector<Factor>& fs, const vector<VarSet>& regions=vector<VarSet>() ) : graphModel(fs), _rg(fs), _gmo(fs) {
+  gbp(const vector<Factor>& fs, const vector<VarSet>& regions=vector<VarSet>() ) : graphModel(fs), _gmo(fs), _rg(fs)  {
       addRegions(regions);
       setProperties();
     }
@@ -870,7 +870,7 @@ namespace mex {
 #endif
 
       for (size_t i=0; i<nD-1; ++i) {
-	findex n = _descend[r][i], p=_ances[r][i][0];
+	//findex n = _descend[r][i], p=_ances[r][i][0]; // these are unused
 	_factors[ _ances[r][i][0] ] += _factors[ _descend[r][i] ];
       }
       //std::cout<<"2 "<<_lnZ<<"\n";
